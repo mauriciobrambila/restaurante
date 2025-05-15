@@ -1,176 +1,34 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cardápio</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .item {
-      background: #fff;
-      border-radius: 22px;
-      margin-bottom: 15px;
-      padding: 10px;
-      display: flex;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .item img {
-      width: 80px;
-      height: 80px;
-      border-radius: 18px;
-      object-fit: cover;
-      margin-right: 15px;
-    }
-    .info {
-      flex: 1;
-    }
-    .nome {
-      font-weight: bold;
-      font-size: 16px;
-      color: #333;
-    }
-    .desc {
-      color: #666;
-      font-size: 14px;
-      margin-top: 4px;
-    }
-    .preco {
-      font-weight: bold;
-      color: #2e7d32;
-      font-size: 16px;
-      margin-top: 8px;
-    }
-    .contador {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .contador button {
-      background: none;
-      border: none;
-      font-size: 22px;
-      color: #2e7d32;
-      cursor: pointer;
-    }
-    .quantidade {
-      font-size: 20px;
-      min-width: 20px;
-      text-align: center;
-    }
-    .finalizar {
-      background-color: #2e7d32;
-      color: white;
-      padding: 15px;
-      border: none;
-      border-radius: 25px;
-      width: 100%;
-      font-size: 17px;
-      font-weight: 700;
-      margin-top: 30px;
-      cursor: pointer;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cardápio do Restaurante</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <header>
+    <h1>Cardápio</h1>
+  </header>
 
-  <h2>Cardápio</h2>
+  <main id="cardapio" class="grid"></main>
 
-  <div id="cardapio"></div>
+  <footer>
+    <button id="finalizarBtn">Finalizar Pedido</button>
+  </footer>
 
-  <button class="finalizar" id="btnFinalizar" onclick="finalizarPedido()" style="display: none;">
-    Finalizar Pedido
-  </button>
+  <!-- Modal de resumo do pedido -->
+  <div id="resumoModal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Resumo do Pedido</h2>
+      <ul id="resumoItens"></ul>
+      <p id="resumoTotal"></p>
+      <input type="text" id="mesaInput" placeholder="Número da mesa" />
+      <button id="confirmarBtn">Confirmar Pedido</button>
+      <button id="fecharModalBtn">Fechar</button>
+    </div>
+  </div>
 
-  <script>
-    const produtos = [
-      {
-        id: '1',
-        nome: 'X-Burguer',
-        descricao: 'Pão, carne, queijo e salada',
-        preco: 15.00,
-        imagem: 'https://via.placeholder.com/80?text=X-Burguer'
-      },
-      {
-        id: '2',
-        nome: 'Batata Frita',
-        descricao: 'Batata crocante frita',
-        preco: 10.00,
-        imagem: 'https://via.placeholder.com/80?text=Batata'
-      },
-      {
-        id: '3',
-        nome: 'Refrigerante',
-        descricao: 'Refrigerante gelado',
-        preco: 5.00,
-        imagem: 'https://via.placeholder.com/80?text=Refri'
-      }
-    ];
-
-    const pedido = {};
-
-    function renderCardapio() {
-      const container = document.getElementById('cardapio');
-      container.innerHTML = '';
-      produtos.forEach(produto => {
-        const quantidade = pedido[produto.id]?.quantidade || 0;
-
-        const item = document.createElement('div');
-        item.className = 'item';
-        item.innerHTML = `
-          <img src="${produto.imagem}" alt="${produto.nome}" />
-          <div class="info">
-            <div class="nome">${produto.nome}</div>
-            <div class="desc">${produto.descricao}</div>
-            <div class="preco">R$ ${produto.preco.toFixed(2)}</div>
-            <div class="contador">
-              <button onclick="removerDoPedido('${produto.id}')">−</button>
-              <span class="quantidade">${quantidade}</span>
-              <button onclick="adicionarAoPedido('${produto.id}')">+</button>
-            </div>
-          </div>
-        `;
-        container.appendChild(item);
-      });
-
-      const temPedido = Object.values(pedido).some(p => p.quantidade > 0);
-      document.getElementById('btnFinalizar').style.display = temPedido ? 'block' : 'none';
-    }
-
-    function adicionarAoPedido(id) {
-      const produto = produtos.find(p => p.id === id);
-      if (!pedido[id]) {
-        pedido[id] = { ...produto, quantidade: 1 };
-      } else {
-        pedido[id].quantidade += 1;
-      }
-      renderCardapio();
-    }
-
-    function removerDoPedido(id) {
-      if (pedido[id]) {
-        pedido[id].quantidade -= 1;
-        if (pedido[id].quantidade <= 0) {
-          delete pedido[id];
-        }
-        renderCardapio();
-      }
-    }
-
-    function finalizarPedido() {
-      const itens = Object.values(pedido).filter(p => p.quantidade > 0);
-      const total = itens.reduce((soma, p) => soma + p.preco * p.quantidade, 0);
-      alert('Pedido finalizado:\n\n' +
-        itens.map(p => `${p.nome} x ${p.quantidade}`).join('\n') +
-        `\n\nTotal: R$ ${total.toFixed(2)}`);
-    }
-
-    renderCardapio();
-  </script>
-
+  <script src="script.js"></script>
 </body>
 </html>
