@@ -14,9 +14,7 @@ export default function PedidoScreen({ route, navigation }) {
   const { pedido } = route.params;
   const [mesa, setMesa] = useState('');
   const [mostrarQR, setMostrarQR] = useState(false);
-
   const total = pedido.reduce((soma, item) => soma + item.preco * item.quantidade, 0);
-
   const finalizarPedido = async () => {
     if (!mesa) {
       Alert.alert('Atenção', 'Por favor, informe o número da mesa.');
