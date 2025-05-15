@@ -1,134 +1,87 @@
-// Dados do cardápio (exemplo)
-const produtos = [
-    {
-      id: 1,
-      nome: 'X-Burguer',
-      descricao: 'Pão, carne, queijo e molho especial.',
-      preco: 18.00,
-      imagem: 'https://source.unsplash.com/300x200/?burger'
-    },
-    {
-      id: 2,
-      nome: 'Pizza Calabresa',
-      descricao: 'Calabresa, cebola, mussarela e orégano.',
-      preco: 35.00,
-      imagem: 'https://source.unsplash.com/300x200/?pizza'
-    },
-    {
-      id: 3,
-      nome: 'Suco Natural',
-      descricao: 'Suco natural de frutas da estação.',
-      preco: 7.50,
-      imagem: 'https://source.unsplash.com/300x200/?juice'
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  const cardapio = [
+    { id: 1, nome: "X-Burger", descricao: "Pão, carne, queijo e alface", preco: 18.9, imagem: "https://via.placeholder.com/150" },
+    { id: 2, nome: "Pizza Calabresa", descricao: "Massa, calabresa, queijo e orégano", preco: 35.5, imagem: "https://via.placeholder.com/150" },
+    { id: 3, nome: "Suco Natural", descricao: "Sabores variados, 500ml", preco: 7.0, imagem: "https://via.placeholder.com/150" },
   ];
-  
-  const container = document.getElementById('cardapio');
-  const modal = document.getElementById('resumoModal');
-  const listaResumo = document.getElementById('listaResumo');
-  const nomeClienteInput = document.getElementById('nomeCliente');
-  const enviarPedidoBtn = document.getElementById('enviarPedidoBtn');
-  const fecharModalBtn = document.getElementById('fecharModal');
-  const confirmacao = document.getElementById('confirmacao');
-  
-  let carrinho = {};
-  
-  // Renderiza os produtos na tela
-  produtos.forEach(produto => {
-    const card = document.createElement('div');
-    card.className = 'card';
-  
+
+  const pedido = {};
+
+  const cardapioEl = document.getElementById("cardapio");
+  const resumoModal = document.getElementById("resumoModal");
+  const resumoItens = document.getElementById("resumoItens");
+  const resumoTotal = document.getElementById("resumoTotal");
+  const mesaInput = document.getElementById("mesaInput");
+
+  // Renderiza os itens do cardápio
+  cardapio.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "card";
     card.innerHTML = `
-      <img src="${produto.imagem}" alt="${produto.nome}">
-      <h2>${produto.nome}</h2>
-      <p>${produto.descricao}</p>
-      <p class="preco">R$ ${produto.preco.toFixed(2)}</p>
-      <div class="quantidade-controls">
-        <button onclick="alterarQuantidade(${produto.id}, -1)">-</button>
-        <span id="qtd-${produto.id}">0</span>
-        <button onclick="alterarQuantidade(${produto.id}, 1)">+</button>
+      <img src="${item.imagem}" alt="${item.nome}" />
+      <h3>${item.nome}</h3>
+      <p>${item.descricao}</p>
+      <p><strong>R$ ${item.preco.toFixed(2)}</strong></p>
+      <div class="quantidade">
+        <button class="menos" data-id="${item.id}">-</button>
+        <span id="qtd-${item.id}">0</span>
+        <button class="mais" data-id="${item.id}">+</button>
       </div>
     `;
-  
-    container.appendChild(card);
+    cardapioEl.appendChild(card);
   });
-  
-  // Altera quantidade no carrinho
-  function alterarQuantidade(id, delta) {
-    if (!carrinho[id]) {
-      carrinho[id] = 0;
-    }
-    carrinho[id] += delta;
-    if (carrinho[id] < 0) carrinho[id] = 0;
-    document.getElementById(`qtd-${id}`).innerText = carrinho[id];
-  }
-  
-  // Exibe o modal de resumo
-  function abrirResumo() {
-    listaResumo.innerHTML = '';
-    let total = 0;
-  
-    for (const id in carrinho) {
-      const qtd = carrinho[id];
-      if (qtd > 0) {
-        const produto = produtos.find(p => p.id == id);
-        const subtotal = produto.preco * qtd;
-        total += subtotal;
-  
-        const item = document.createElement('li');
-        item.textContent = `${produto.nome} x${qtd} - R$ ${subtotal.toFixed(2)}`;
-        listaResumo.appendChild(item);
+
+  // Aumentar e diminuir quantidade
+  document.querySelectorAll(".mais").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      pedido[id] = (pedido[id] || 0) + 1;
+      document.getElementById(`qtd-${id}`).innerText = pedido[id];
+    });
+  });
+
+  document.querySelectorAll(".menos").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      if (pedido[id]) {
+        pedido[id]--;
+        if (pedido[id] === 0) delete pedido[id];
+        document.getElementById(`qtd-${id}`).innerText = pedido[id] || 0;
       }
+    });
+  });
+
+  // Finalizar pedido
+  document.getElementById("finalizarBtn").addEventListener("click", () => {
+    resumoItens.innerHTML = "";
+    let total = 0;
+
+    for (let id in pedido) {
+      const item = cardapio.find(p => p.id == id);
+      const qtd = pedido[id];
+      const li = document.createElement("li");
+      li.textContent = `${item.nome} x ${qtd} = R$ ${(item.preco * qtd).toFixed(2)}`;
+      resumoItens.appendChild(li);
+      total += item.preco * qtd;
     }
-  
-    if (total === 0) {
-      alert('Adicione algum item ao pedido antes de finalizar.');
+
+    resumoTotal.textContent = `Total: R$ ${total.toFixed(2)}`;
+    resumoModal.classList.remove("hidden");
+  });
+
+  document.getElementById("fecharModalBtn").addEventListener("click", () => {
+    resumoModal.classList.add("hidden");
+  });
+
+  document.getElementById("confirmarBtn").addEventListener("click", () => {
+    const mesa = mesaInput.value;
+    if (!mesa) {
+      alert("Por favor, informe o número da mesa.");
       return;
     }
-  
-    const totalItem = document.createElement('li');
-    totalItem.style.fontWeight = 'bold';
-    totalItem.textContent = `Total: R$ ${total.toFixed(2)}`;
-    listaResumo.appendChild(totalItem);
-  
-    modal.classList.remove('hidden');
-  }
-  
-  // Fecha o modal
-  fecharModalBtn.addEventListener('click', () => {
-    modal.classList.add('hidden');
+    alert("Pedido confirmado! Obrigado.");
+    resumoModal.classList.add("hidden");
   });
-  
-  // Envia o pedido
-  enviarPedidoBtn.addEventListener('click', () => {
-    const nome = nomeClienteInput.value.trim();
-    if (!nome) {
-      alert('Por favor, insira seu nome.');
-      return;
-    }
-  
-    const pedido = [];
-    let total = 0;
-  
-    for (const id in carrinho) {
-      const qtd = carrinho[id];
-      if (qtd > 0) {
-        const produto = produtos.find(p => p.id == id);
-        pedido.push(`${produto.nome} x${qtd}`);
-        total += produto.preco * qtd;
-      }
-    }
-  
-    const mensagem = `Pedido de ${nome}:\n${pedido.join('\n')}\nTotal: R$ ${total.toFixed(2)}`;
-    
-    // Simula envio (alert e confirmação)
-    alert('Pedido enviado com sucesso!');
-    confirmacao.innerText = 'Pedido enviado com sucesso! Obrigado.';
-    
-    // Reset
-    carrinho = {};
-    produtos.forEach(p => document.getElementById(`qtd-${p.id}`).innerText = '0');
-    nomeClienteInput.value = '';
-    modal.classList.add('hidden');
-  });
+});
+
   
