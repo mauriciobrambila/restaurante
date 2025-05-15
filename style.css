@@ -173,6 +173,14 @@ footer {
     display: none;
 }
 
+/* Optional success icon styling */
+.modal-content .success-icon {
+    font-size: 40px;
+    color: #4caf50;
+    margin-bottom: 10px;
+}
+
+/* Responsive Adjustments */
 @media (max-width: 500px) {
     .card img {
         height: 140px;
