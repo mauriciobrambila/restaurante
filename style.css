@@ -1,4 +1,4 @@
-/* General Reset and Base Styles */
+/* Reset básico */
 * {
     margin: 0;
     padding: 0;
@@ -9,10 +9,9 @@
 body {
     background-color: #f5f5f5;
     color: #333;
-}
-
-/* Header */
-header {
+  }
+  
+  header {
     background-color: #2e7d32;
     padding: 20px;
     text-align: center;
@@ -21,18 +20,16 @@ header {
 
 h1 {
     font-size: 28px;
-}
-
-/* Main Grid Layout */
-main.grid {
+  }
+  
+  main.grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 15px;
     padding: 20px;
-}
-
-/* Card Layout */
-.card {
+  }
+  
+  .card {
     background: white;
     border-radius: 12px;
     padding: 15px;
@@ -86,10 +83,10 @@ main.grid {
 
 .card button.qty-btn:hover {
     background-color: #256128;
-}
-
-/* Footer */
-footer {
+  }
+  
+  /* Rodapé com botão */
+  footer {
     padding: 20px;
     text-align: center;
 }
@@ -107,10 +104,10 @@ footer {
 
 #finalizarBtn:hover {
     background-color: #256128;
-}
-
-/* Modal Overlay */
-.modal {
+  }
+  
+  /* Modal de resumo */
+  .modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -121,10 +118,9 @@ footer {
     align-items: center;
     justify-content: center;
     z-index: 999;
-}
-
-/* Modal Content Box */
-.modal-content {
+  }
+  
+  .modal-content {
     background: white;
     padding: 30px;
     border-radius: 12px;
@@ -132,23 +128,9 @@ footer {
     width: 90%;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     text-align: center;
-    transition: all 0.3s ease-in-out;
-}
-
-/* Success State After Payment */
-.modal-content.success {
-    border: 2px solid #4caf50;
-    animation: pulseSuccess 0.5s ease-in-out;
-}
-
-/* Optional animation on success */
-@keyframes pulseSuccess {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-}
-
-.modal-content h2 {
+  }
+  
+  .modal-content h2 {
     font-size: 22px;
     margin-bottom: 10px;
     color: #2e7d32;
@@ -173,10 +155,9 @@ footer {
     font-size: 16px;
     border-radius: 6px;
     border: 1px solid #ccc;
-}
-
-/* Button inside modal */
-.modal-content button {
+  }
+  
+  .modal-content button {
     margin: 8px;
     padding: 10px 20px;
     border: none;
@@ -189,21 +170,24 @@ footer {
 
 .modal-content button:hover {
     background-color: #256128;
-}
-
-/* Hide Modal */
-.hidden {
+  }
+  
+  /* Classe auxiliar para esconder o modal */
+  .hidden {
     display: none;
-}
-
-.modal-content .success-icon {
-    font-size: 40px;
-    color: #4caf50;
-    margin-bottom: 10px;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 500px) {
+  }
+  
+  /* Mensagem de confirmação */
+  .confirmacao {
+    font-size: 18px;
+    color: #2e7d32;
+    margin-top: 20px;
+    font-weight: bold;
+    text-align: center;
+  }
+  
+  /* Responsivo para telas menores */
+  @media (max-width: 500px) {
     .card img {
         height: 140px;
     }
