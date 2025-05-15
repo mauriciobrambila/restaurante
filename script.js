@@ -1,111 +1,96 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const cardapio = [
-    { id: 1, nome: "X-Burger", descricao: "Pão, carne, queijo e alface", preco: 18.9, imagem: "https://via.placeholder.com/150" },
-    { id: 2, nome: "Pizza Calabresa", descricao: "Massa, calabresa, queijo e orégano", preco: 35.5, imagem: "https://via.placeholder.com/150" },
-    { id: 3, nome: "Suco Natural", descricao: "Sabores variados, 500ml", preco: 7.0, imagem: "https://via.placeholder.com/150" },
+  const produtos = [
+    { id: '1', nome: 'X-Burguer', descricao: 'Pão, carne, queijo e molho especial.', preco: 15.00, img: 'img/xburguer.jpg' },
+    { id: '2', nome: 'Batata Frita', descricao: 'Batata crocante frita.', preco: 10.00, img: 'img/batata.jpg' },
+    { id: '3', nome: 'Refrigerante', descricao: 'Refrigerante gelado.', preco: 5.00, img: 'img/refri.jpg' }
   ];
 
-  const pedido = {};
+  const container = document.getElementById('cardapio');
+  let carrinho = {};
 
-  const cardapioEl = document.getElementById("cardapio");
-  const resumoModal = document.getElementById("resumoModal");
-  const resumoItens = document.getElementById("resumoItens");
-  const resumoTotal = document.getElementById("resumoTotal");
-  const mesaInput = document.getElementById("mesaInput");
-  const pagamentoModal = document.getElementById("pagamentoModal");
-  const qrImagem = document.getElementById("qrImagem");
-  const qrValor = document.getElementById("qrValor");
-
-  // Renderiza os itens do cardápio
-  cardapio.forEach(item => {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <img src="${item.imagem}" alt="${item.nome}" />
-      <h3>${item.nome}</h3>
+  // Renderizar produtos
+  produtos.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <img src="${item.img}" alt="${item.nome}">
+      <h2>${item.nome}</h2>
       <p>${item.descricao}</p>
-      <p><strong>R$ ${item.preco.toFixed(2)}</strong></p>
-      <div class="quantidade">
-        <button class="menos" data-id="${item.id}">-</button>
+      <p class="preco">R$ ${item.preco.toFixed(2)}</p>
+      <div class="quantidade-controls">
+        <button class="qty-btn" data-id="${item.id}" data-action="minus">-</button>
         <span id="qtd-${item.id}">0</span>
-        <button class="mais" data-id="${item.id}">+</button>
+        <button class="qty-btn" data-id="${item.id}" data-action="plus">+</button>
       </div>
     `;
-    cardapioEl.appendChild(card);
+    container.appendChild(div);
   });
 
-  // Aumentar e diminuir quantidade
-  document.querySelectorAll(".mais").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-id");
-      pedido[id] = (pedido[id] || 0) + 1;
-      document.getElementById(`qtd-${id}`).innerText = pedido[id];
+  // Botões + e -
+  document.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      if (!carrinho[id]) carrinho[id] = 0;
+      carrinho[id] += action === 'plus' ? 1 : -1;
+      if (carrinho[id] < 0) carrinho[id] = 0;
+      document.getElementById(`qtd-${id}`).innerText = carrinho[id];
     });
   });
 
-  document.querySelectorAll(".menos").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-id");
-      if (pedido[id]) {
-        pedido[id]--;
-        if (pedido[id] === 0) delete pedido[id];
-        document.getElementById(`qtd-${id}`).innerText = pedido[id] || 0;
-      }
-    });
-  });
-
-  // Finalizar pedido (resumo)
-  document.getElementById("finalizarBtn").addEventListener("click", () => {
-    resumoItens.innerHTML = "";
+  // Finalizar pedido - mostrar resumo
+  document.getElementById('finalizarBtn').addEventListener('click', () => {
+    const resumoItens = document.getElementById('resumoItens');
+    const resumoTotal = document.getElementById('resumoTotal');
+    resumoItens.innerHTML = '';
     let total = 0;
-
-    for (let id in pedido) {
-      const item = cardapio.find(p => p.id == id);
-      const qtd = pedido[id];
-      const li = document.createElement("li");
-      li.textContent = `${item.nome} x ${qtd} = R$ ${(item.preco * qtd).toFixed(2)}`;
-      resumoItens.appendChild(li);
-      total += item.preco * qtd;
+    for (let id in carrinho) {
+      if (carrinho[id] > 0) {
+        const p = produtos.find(x => x.id === id);
+        const subtotal = p.preco * carrinho[id];
+        total += subtotal;
+        const li = document.createElement('li');
+        li.textContent = `${p.nome} x${carrinho[id]} = R$ ${subtotal.toFixed(2)}`;
+        resumoItens.appendChild(li);
+      }
     }
-
+    if (total === 0) {
+      alert('Adicione itens antes de finalizar.');
+      return;
+    }
     resumoTotal.textContent = `Total: R$ ${total.toFixed(2)}`;
-    resumoModal.classList.remove("hidden");
+    document.getElementById('resumoModal').classList.remove('hidden');
   });
 
-  document.getElementById("fecharModalBtn").addEventListener("click", () => {
-    resumoModal.classList.add("hidden");
+  // Fechar resumo
+  document.getElementById('fecharModalBtn').addEventListener('click', () => {
+    document.getElementById('resumoModal').classList.add('hidden');
   });
 
-  // Confirmar e abrir tela de pagamento
-  document.getElementById("confirmarBtn").addEventListener("click", () => {
-    const mesa = mesaInput.value;
+  // Confirmar pedido e mostrar QR
+  document.getElementById('confirmarBtn').addEventListener('click', () => {
+    const mesa = document.getElementById('mesaInput').value.trim();
     if (!mesa) {
-      alert("Por favor, informe o número da mesa.");
+      alert('Informe o número da mesa.');
       return;
     }
 
-    // Fecha resumo, abre modal de pagamento
-    resumoModal.classList.add("hidden");
-    pagamentoModal.classList.remove("hidden");
+    const totalText = document.getElementById('resumoTotal').textContent;
+    const total = parseFloat(totalText.replace('Total: R$ ', '').replace(',', '.'));
 
-    // Calcula total
-    let total = 0;
-    for (let id in pedido) {
-      const item = cardapio.find(p => p.id == id);
-      total += item.preco * pedido[id];
-    }
+    // Exibe o modal de pagamento
+    document.getElementById('resumoModal').classList.add('hidden');
+    document.getElementById('pagamentoModal').classList.remove('hidden');
 
-    qrValor.textContent = `R$ ${total.toFixed(2)}`;
-
-    // Gera QR fictício com valor
-    qrImagem.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Pagamento-R$${total.toFixed(2)}`;
+    document.getElementById('qrValor').textContent = `R$ ${total.toFixed(2)}`;
+    document.getElementById('qrImagem').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Pagamento-R$${total.toFixed(2)}`;
   });
 
-  // Finalizar pagamento
-  document.getElementById("confirmarPagamentoBtn").addEventListener("click", () => {
-    const mesa = mesaInput.value;
-    const valor = qrValor.textContent;
-    pagamentoModal.classList.add("hidden");
-    alert(`Pagamento de ${valor} confirmado para a mesa ${mesa}. Obrigado.`);
+  // Confirmar pagamento
+  document.getElementById('confirmarPagamentoBtn').addEventListener('click', () => {
+    const mesa = document.getElementById('mesaInput').value.trim();
+    const valor = document.getElementById('qrValor').textContent;
+    document.getElementById('pagamentoModal').classList.add('hidden');
+    alert(`Pagamento de ${valor} confirmado para a mesa ${mesa}. Obrigado!`);
   });
 });
