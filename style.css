@@ -1,3 +1,4 @@
+/* General Reset and Base Styles */
 * {
     margin: 0;
     padding: 0;
@@ -10,6 +11,7 @@ body {
     color: #333;
 }
 
+/* Header */
 header {
     background-color: #2e7d32;
     padding: 20px;
@@ -21,6 +23,7 @@ h1 {
     font-size: 28px;
 }
 
+/* Main Grid Layout */
 main.grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -28,6 +31,7 @@ main.grid {
     padding: 20px;
 }
 
+/* Card Layout */
 .card {
     background: white;
     border-radius: 12px;
@@ -84,6 +88,7 @@ main.grid {
     background-color: #256128;
 }
 
+/* Footer */
 footer {
     padding: 20px;
     text-align: center;
@@ -104,6 +109,7 @@ footer {
     background-color: #256128;
 }
 
+/* Modal Overlay */
 .modal {
     position: fixed;
     top: 0;
@@ -117,6 +123,7 @@ footer {
     z-index: 999;
 }
 
+/* Modal Content Box */
 .modal-content {
     background: white;
     padding: 30px;
@@ -125,6 +132,20 @@ footer {
     width: 90%;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     text-align: center;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Success State After Payment */
+.modal-content.success {
+    border: 2px solid #4caf50;
+    animation: pulseSuccess 0.5s ease-in-out;
+}
+
+/* Optional animation on success */
+@keyframes pulseSuccess {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
 }
 
 .modal-content h2 {
@@ -154,6 +175,7 @@ footer {
     border: 1px solid #ccc;
 }
 
+/* Button inside modal */
 .modal-content button {
     margin: 8px;
     padding: 10px 20px;
@@ -169,10 +191,19 @@ footer {
     background-color: #256128;
 }
 
+/* Hide Modal */
 .hidden {
     display: none;
 }
 
+/* Optional success icon styling */
+.modal-content .success-icon {
+    font-size: 40px;
+    color: #4caf50;
+    margin-bottom: 10px;
+}
+
+/* Responsive Adjustments */
 @media (max-width: 500px) {
     .card img {
         height: 140px;
