@@ -1,79 +1,176 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fazer Pedido</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cardápio</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      background-color: #f2f2f2;
+      background-color: #f5f5f5;
     }
-    h1 {
+    .item {
+      background: #fff;
+      border-radius: 22px;
+      margin-bottom: 15px;
+      padding: 10px;
+      display: flex;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .item img {
+      width: 80px;
+      height: 80px;
+      border-radius: 18px;
+      object-fit: cover;
+      margin-right: 15px;
+    }
+    .info {
+      flex: 1;
+    }
+    .nome {
+      font-weight: bold;
+      font-size: 16px;
       color: #333;
     }
-    .produto {
-      background-color: #fff;
-      padding: 15px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    .desc {
+      color: #666;
+      font-size: 14px;
+      margin-top: 4px;
     }
-    button {
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
+    .preco {
+      font-weight: bold;
+      color: #2e7d32;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+    .contador {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .contador button {
+      background: none;
       border: none;
-      border-radius: 5px;
+      font-size: 22px;
+      color: #2e7d32;
       cursor: pointer;
     }
-    button:disabled {
-      background-color: #aaa;
+    .quantidade {
+      font-size: 20px;
+      min-width: 20px;
+      text-align: center;
     }
-    #mensagem {
-      margin-top: 20px;
-      color: green;
-      font-weight: bold;
+    .finalizar {
+      background-color: #2e7d32;
+      color: white;
+      padding: 15px;
+      border: none;
+      border-radius: 25px;
+      width: 100%;
+      font-size: 17px;
+      font-weight: 700;
+      margin-top: 30px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Cardápio</h1>
 
-  <div class="produto">
-    <p><strong>Hambúrguer</strong> - R$ 20,00</p>
-    <button onclick="fazerPedido('Hambúrguer')">Pedir</button>
-  </div>
+  <h2>Cardápio</h2>
 
-  <div class="produto">
-    <p><strong>Pizza</strong> - R$ 30,00</p>
-    <button onclick="fazerPedido('Pizza')">Pedir</button>
-  </div>
+  <div id="cardapio"></div>
 
-  <div class="produto">
-    <p><strong>Refrigerante</strong> - R$ 5,00</p>
-    <button onclick="fazerPedido('Refrigerante')">Pedir</button>
-  </div>
-
-  <div id="mensagem"></div>
+  <button class="finalizar" id="btnFinalizar" onclick="finalizarPedido()" style="display: none;">
+    Finalizar Pedido
+  </button>
 
   <script>
-    async function fazerPedido(produto) {
-      const resposta = await fetch('https://restaurante/api/pedido', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ produto })
+    const produtos = [
+      {
+        id: '1',
+        nome: 'X-Burguer',
+        descricao: 'Pão, carne, queijo e salada',
+        preco: 15.00,
+        imagem: 'https://via.placeholder.com/80?text=X-Burguer'
+      },
+      {
+        id: '2',
+        nome: 'Batata Frita',
+        descricao: 'Batata crocante frita',
+        preco: 10.00,
+        imagem: 'https://via.placeholder.com/80?text=Batata'
+      },
+      {
+        id: '3',
+        nome: 'Refrigerante',
+        descricao: 'Refrigerante gelado',
+        preco: 5.00,
+        imagem: 'https://via.placeholder.com/80?text=Refri'
+      }
+    ];
+
+    const pedido = {};
+
+    function renderCardapio() {
+      const container = document.getElementById('cardapio');
+      container.innerHTML = '';
+      produtos.forEach(produto => {
+        const quantidade = pedido[produto.id]?.quantidade || 0;
+
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.innerHTML = `
+          <img src="${produto.imagem}" alt="${produto.nome}" />
+          <div class="info">
+            <div class="nome">${produto.nome}</div>
+            <div class="desc">${produto.descricao}</div>
+            <div class="preco">R$ ${produto.preco.toFixed(2)}</div>
+            <div class="contador">
+              <button onclick="removerDoPedido('${produto.id}')">−</button>
+              <span class="quantidade">${quantidade}</span>
+              <button onclick="adicionarAoPedido('${produto.id}')">+</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(item);
       });
 
-      if (resposta.ok) {
-        document.getElementById('mensagem').innerText = `Pedido de ${produto} enviado!`;
+      const temPedido = Object.values(pedido).some(p => p.quantidade > 0);
+      document.getElementById('btnFinalizar').style.display = temPedido ? 'block' : 'none';
+    }
+
+    function adicionarAoPedido(id) {
+      const produto = produtos.find(p => p.id === id);
+      if (!pedido[id]) {
+        pedido[id] = { ...produto, quantidade: 1 };
       } else {
-        document.getElementById('mensagem').innerText = `Erro ao enviar pedido.`;
+        pedido[id].quantidade += 1;
+      }
+      renderCardapio();
+    }
+
+    function removerDoPedido(id) {
+      if (pedido[id]) {
+        pedido[id].quantidade -= 1;
+        if (pedido[id].quantidade <= 0) {
+          delete pedido[id];
+        }
+        renderCardapio();
       }
     }
+
+    function finalizarPedido() {
+      const itens = Object.values(pedido).filter(p => p.quantidade > 0);
+      const total = itens.reduce((soma, p) => soma + p.preco * p.quantidade, 0);
+      alert('Pedido finalizado:\n\n' +
+        itens.map(p => `${p.nome} x ${p.quantidade}`).join('\n') +
+        `\n\nTotal: R$ ${total.toFixed(2)}`);
+    }
+
+    renderCardapio();
   </script>
+
 </body>
 </html>
