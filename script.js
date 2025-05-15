@@ -12,6 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const resumoItens = document.getElementById("resumoItens");
   const resumoTotal = document.getElementById("resumoTotal");
   const mesaInput = document.getElementById("mesaInput");
+  const pagamentoModal = document.getElementById("pagamentoModal");
+  const qrImagem = document.getElementById("qrImagem");
+  const qrValor = document.getElementById("qrValor");
 
   // Renderiza os itens do cardápio
   cardapio.forEach(item => {
@@ -51,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Finalizar pedido
+  // Finalizar pedido (resumo)
   document.getElementById("finalizarBtn").addEventListener("click", () => {
     resumoItens.innerHTML = "";
     let total = 0;
@@ -73,15 +76,36 @@ document.addEventListener("DOMContentLoaded", () => {
     resumoModal.classList.add("hidden");
   });
 
+  // Confirmar e abrir tela de pagamento
   document.getElementById("confirmarBtn").addEventListener("click", () => {
     const mesa = mesaInput.value;
     if (!mesa) {
       alert("Por favor, informe o número da mesa.");
       return;
     }
-    alert("Pedido confirmado! Obrigado.");
+
+    // Fecha resumo, abre modal de pagamento
     resumoModal.classList.add("hidden");
+    pagamentoModal.classList.remove("hidden");
+
+    // Calcula total
+    let total = 0;
+    for (let id in pedido) {
+      const item = cardapio.find(p => p.id == id);
+      total += item.preco * pedido[id];
+    }
+
+    qrValor.textContent = `R$ ${total.toFixed(2)}`;
+
+    // Gera QR fictício com valor
+    qrImagem.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Pagamento-R$${total.toFixed(2)}`;
+  });
+
+  // Finalizar pagamento
+  document.getElementById("confirmarPagamentoBtn").addEventListener("click", () => {
+    const mesa = mesaInput.value;
+    const valor = qrValor.textContent;
+    pagamentoModal.classList.add("hidden");
+    alert(`Pagamento de ${valor} confirmado para a mesa ${mesa}. Obrigado.`);
   });
 });
-
-  

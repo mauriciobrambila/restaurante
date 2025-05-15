@@ -1,23 +1,107 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cardápio do Restaurante</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f7f7f7;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #cardapio {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 200px;
+      text-align: center;
+    }
+
+    .card img {
+      width: 100%;
+      border-radius: 10px;
+    }
+
+    .quantidade {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .quantidade button {
+      padding: 5px 10px;
+      font-size: 18px;
+    }
+
+    #finalizarBtn {
+      margin: 30px auto;
+      display: block;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      max-width: 90%;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      width: 80%;
+      margin: 10px 0;
+    }
+
+    button {
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Cardápio</h1>
-  </header>
+  <h1>Cardápio</h1>
+  <div id="cardapio"></div>
 
-  <main id="cardapio" class="grid"></main>
+  <button id="finalizarBtn">Finalizar Pedido</button>
 
-  <footer>
-    <button id="finalizarBtn">Finalizar Pedido</button>
-  </footer>
-
-  <!-- Modal de resumo do pedido -->
+  <!-- Modal Resumo -->
   <div id="resumoModal" class="modal hidden">
     <div class="modal-content">
       <h2>Resumo do Pedido</h2>
@@ -26,6 +110,17 @@
       <input type="text" id="mesaInput" placeholder="Número da mesa" />
       <button id="confirmarBtn">Confirmar Pedido</button>
       <button id="fecharModalBtn">Fechar</button>
+    </div>
+  </div>
+
+  <!-- Modal Pagamento -->
+  <div id="pagamentoModal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Pagamento via Pix</h2>
+      <p>Total a pagar:</p>
+      <h3 id="qrValor"></h3>
+      <img id="qrImagem" src="" alt="QR Code Pix" />
+      <button id="confirmarPagamentoBtn">Confirmar Pagamento</button>
     </div>
   </div>
 
