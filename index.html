@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fazer Pedido</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f2f2f2;
+    }
+    h1 {
+      color: #333;
+    }
+    .produto {
+      background-color: #fff;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #aaa;
+    }
+    #mensagem {
+      margin-top: 20px;
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cardápio</h1>
+
+  <div class="produto">
+    <p><strong>Hambúrguer</strong> - R$ 20,00</p>
+    <button onclick="fazerPedido('Hambúrguer')">Pedir</button>
+  </div>
+
+  <div class="produto">
+    <p><strong>Pizza</strong> - R$ 30,00</p>
+    <button onclick="fazerPedido('Pizza')">Pedir</button>
+  </div>
+
+  <div class="produto">
+    <p><strong>Refrigerante</strong> - R$ 5,00</p>
+    <button onclick="fazerPedido('Refrigerante')">Pedir</button>
+  </div>
+
+  <div id="mensagem"></div>
+
+  <script>
+    async function fazerPedido(produto) {
+      const resposta = await fetch('https://restaurante/api/pedido', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ produto })
+      });
+
+      if (resposta.ok) {
+        document.getElementById('mensagem').innerText = `Pedido de ${produto} enviado!`;
+      } else {
+        document.getElementById('mensagem').innerText = `Erro ao enviar pedido.`;
+      }
+    }
+  </script>
+</body>
+</html>
