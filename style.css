@@ -1,4 +1,3 @@
-/* Reset básico */
 * {
     margin: 0;
     padding: 0;
@@ -9,9 +8,9 @@
 body {
     background-color: #f5f5f5;
     color: #333;
-  }
-  
-  header {
+}
+
+header {
     background-color: #2e7d32;
     padding: 20px;
     text-align: center;
@@ -20,16 +19,16 @@ body {
 
 h1 {
     font-size: 28px;
-  }
-  
-  main.grid {
+}
+
+main.grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 15px;
     padding: 20px;
-  }
-  
-  .card {
+}
+
+.card {
     background: white;
     border-radius: 12px;
     padding: 15px;
@@ -83,10 +82,9 @@ h1 {
 
 .card button.qty-btn:hover {
     background-color: #256128;
-  }
-  
-  /* Rodapé com botão */
-  footer {
+}
+
+footer {
     padding: 20px;
     text-align: center;
 }
@@ -104,10 +102,9 @@ h1 {
 
 #finalizarBtn:hover {
     background-color: #256128;
-  }
-  
-  /* Modal de resumo */
-  .modal {
+}
+
+.modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -118,9 +115,9 @@ h1 {
     align-items: center;
     justify-content: center;
     z-index: 999;
-  }
-  
-  .modal-content {
+}
+
+.modal-content {
     background: white;
     padding: 30px;
     border-radius: 12px;
@@ -128,9 +125,9 @@ h1 {
     width: 90%;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     text-align: center;
-  }
-  
-  .modal-content h2 {
+}
+
+.modal-content h2 {
     font-size: 22px;
     margin-bottom: 10px;
     color: #2e7d32;
@@ -155,9 +152,9 @@ h1 {
     font-size: 16px;
     border-radius: 6px;
     border: 1px solid #ccc;
-  }
-  
-  .modal-content button {
+}
+
+.modal-content button {
     margin: 8px;
     padding: 10px 20px;
     border: none;
@@ -170,24 +167,13 @@ h1 {
 
 .modal-content button:hover {
     background-color: #256128;
-  }
-  
-  /* Classe auxiliar para esconder o modal */
-  .hidden {
+}
+
+.hidden {
     display: none;
-  }
-  
-  /* Mensagem de confirmação */
-  .confirmacao {
-    font-size: 18px;
-    color: #2e7d32;
-    margin-top: 20px;
-    font-weight: bold;
-    text-align: center;
-  }
-  
-  /* Responsivo para telas menores */
-  @media (max-width: 500px) {
+}
+
+@media (max-width: 500px) {
     .card img {
         height: 140px;
     }
