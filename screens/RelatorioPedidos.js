@@ -12,9 +12,28 @@ export default function RelatorioPedidos({ navigation }) {
   }, []);
 
   const carregarPedidos = async () => {
-    const dados = await AsyncStorage.getItem('pedidos_finalizados');
-    if (dados) {
-      setPedidos(JSON.parse(dados));
+    try {
+      // Tente buscar do backend primeiro
+      const response = await fetch('https://restaurante-brown.vercel.app/api/pedidos');
+      if (response.ok) {
+        const pedidosApi = await response.json();
+        setPedidos(pedidosApi);
+  
+        // Opcional: atualizar local para persistir
+        await AsyncStorage.setItem('pedidos_finalizados', JSON.stringify(pedidosApi));
+      } else {
+        // Se falhar, tenta carregar do local
+        const dados = await AsyncStorage.getItem('pedidos_finalizados');
+        if (dados) {
+          setPedidos(JSON.parse(dados));
+        }
+      }
+    } catch (error) {
+      // Se erro de rede, tenta carregar do local
+      const dados = await AsyncStorage.getItem('pedidos_finalizados');
+      if (dados) {
+        setPedidos(JSON.parse(dados));
+      }
     }
   };
 
