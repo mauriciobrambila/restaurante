@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const container = document.getElementById('cardapio');
   let carrinho = {};
 
-  // Renderizar produtos
   produtos.forEach(item => {
     const div = document.createElement('div');
     div.className = 'card';
@@ -26,7 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
     container.appendChild(div);
   });
 
-  // Botões + e -
   document.querySelectorAll('.qty-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-id');
@@ -38,7 +36,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Finalizar pedido - mostrar resumo
   document.getElementById('finalizarBtn').addEventListener('click', () => {
     const resumoItens = document.getElementById('resumoItens');
     const resumoTotal = document.getElementById('resumoTotal');
@@ -62,12 +59,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('resumoModal').classList.remove('hidden');
   });
 
-  // Fechar resumo
   document.getElementById('fecharModalBtn').addEventListener('click', () => {
     document.getElementById('resumoModal').classList.add('hidden');
   });
 
-  // Confirmar pedido e mostrar QR
   document.getElementById('confirmarBtn').addEventListener('click', () => {
     const mesa = document.getElementById('mesaInput').value.trim();
     if (!mesa) {
@@ -75,18 +70,31 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const totalText = document.getElementById('resumoTotal').textContent;
-    const total = parseFloat(totalText.replace('Total: R$ ', '').replace(',', '.'));
+    const pedido = [];
+    let total = 0;
+    for (let id in carrinho) {
+      if (carrinho[id] > 0) {
+        const p = produtos.find(x => x.id === id);
+        pedido.push({ nome: p.nome, quantidade: carrinho[id], preco: p.preco });
+        total += p.preco * carrinho[id];
+      }
+    }
 
-    // Exibe o modal de pagamento
+    const pedidoFinal = {
+      mesa,
+      itens: pedido,
+      total: total.toFixed(2),
+      horario: new Date().toLocaleString()
+    };
+
+    enviarPedidoParaServidor(pedidoFinal);
+
     document.getElementById('resumoModal').classList.add('hidden');
     document.getElementById('pagamentoModal').classList.remove('hidden');
-
     document.getElementById('qrValor').textContent = `R$ ${total.toFixed(2)}`;
     document.getElementById('qrImagem').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Pagamento-R$${total.toFixed(2)}`;
   });
 
-  // Confirmar pagamento
   document.getElementById('confirmarPagamentoBtn').addEventListener('click', () => {
     const mesa = document.getElementById('mesaInput').value.trim();
     const valor = document.getElementById('qrValor').textContent;
@@ -94,3 +102,18 @@ document.addEventListener("DOMContentLoaded", () => {
     alert(`Pagamento de ${valor} confirmado para a mesa ${mesa}. Obrigado!`);
   });
 });
+
+function enviarPedidoParaServidor(pedido) {
+  fetch('/api/pedidos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pedido)
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log('Pedido enviado:', data);
+    })
+    .catch(err => {
+      console.error('Erro ao enviar pedido:', err);
+    });
+}
