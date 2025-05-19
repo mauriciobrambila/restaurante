@@ -104,13 +104,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-function enviarPedidoParaServidor(pedido) {
+function enviarPedidoParaServidor(pedidoFinal) {
+  // Certifique-se de que pedidoFinal.total é um número
+  if (typeof pedidoFinal.total === 'string') {
+    pedidoFinal.total = parseFloat(pedidoFinal.total);
+  }
+
   fetch('https://restaurante-brown.vercel.app/api/pedidos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(pedido)
+    body: JSON.stringify(pedidoFinal)
   })
-  .then(res => res.json())
-  .then(data => console.log('Pedido enviado:', data))
-  .catch(err => console.error('Erro:', err));
+    .then(res => res.json())
+    .then(data => console.log("Pedido salvo:", data))
+    .catch(err => console.error("Erro:", err));
 }
