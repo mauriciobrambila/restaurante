@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('resumoModal').classList.add('hidden');
   });
 
-  document.getElementById('confirmarBtn').addEventListener('click', async () => {
+  document.getElementById('confirmarPedidoBtn').addEventListener('click', async () => {
     const mesa = mesaInput.value.trim();
     if (!mesa) {
       alert('Informe o número da mesa.');
