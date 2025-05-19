@@ -13,19 +13,25 @@ export default function RelatorioPedidos({ navigation }) {
 
   const carregarPedidos = async () => {
     try {
-      // Tente buscar do backend primeiro
       const response = await fetch('https://restaurante-brown.vercel.app/api/pedidos');
+      if (response.ok) {
         const pedidosApi = await response.json();
-        setPedidos(pedidosApi);
-  
-     
-      } catch (error) {
-        console.error('Erro ao buscar pedidos:', error);
-        // Fallback para dados locais
-        const dadosLocais = await AsyncStorage.getItem('pedidos_finalizados');
-        if (dadosLocais) setPedidos(JSON.parse(dadosLocais));
+        // Garante que todos os pedidos tenham horário válido
+        const pedidosFormatados = pedidosApi.map(pedido => ({
+          ...pedido,
+          horario: pedido.horario || new Date().toISOString() // Fallback para data atual
+        }));
+        setPedidos(pedidosFormatados);
+        await AsyncStorage.setItem('pedidos_finalizados', JSON.stringify(pedidosFormatados));
+      } else {
+        const dados = await AsyncStorage.getItem('pedidos_finalizados');
+        if (dados) setPedidos(JSON.parse(dados));
       }
-    };
+    } catch (error) {
+      const dados = await AsyncStorage.getItem('pedidos_finalizados');
+      if (dados) setPedidos(JSON.parse(dados));
+    }
+  };
 
   const excluirPedido = async (index) => {
     Alert.alert(
@@ -79,7 +85,10 @@ export default function RelatorioPedidos({ navigation }) {
           <Ionicons name="trash-outline" size={22} color="#c62828" />
         </TouchableOpacity>
       </View>
-      <Text style={styles.data}>{new Date(item.data).toLocaleString()}</Text>
+      {/* Linha corrigida para formatar a data */}
+      <Text style={styles.data}>
+        {item.horario ? new Date(item.horario).toLocaleString('pt-BR') : 'Data não disponível'}
+      </Text>
       
       {item.itens.map((p, i) => (
         <View key={i} style={styles.itemRow}>
@@ -89,10 +98,8 @@ export default function RelatorioPedidos({ navigation }) {
         </View>
       ))}
       
-      <Text style={styles.total}>
-  Total: R$ {item.total ? Number(item.total).toFixed(2) : "0.00"}
-</Text>
-    </View>
+      <Text style={styles.total}>Total: R$ {item.total.toFixed(2)}</Text>
+      </View>
   );
 
   return (
@@ -133,6 +140,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  data: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 3,
   },
   lista: {
     padding: 10,
