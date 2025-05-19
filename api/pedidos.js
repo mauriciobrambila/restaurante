@@ -1,27 +1,41 @@
-// api/pedidos.js (Vercel)
-import { promises as fs } from 'fs';
-import path from 'path';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
 
-const filePath = path.join(process.cwd(), 'pedidos.json');
+const firebaseConfig = {
+  apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
+  authDomain: "restaurante-e2ff0.firebaseapp.com",
+  projectId: "restaurante-e2ff0",
+  storageBucket: "restaurante-e2ff0.firebasestorage.app",
+  messagingSenderId: "839289505253",
+  appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
+};
+
+// Inicialize o Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 export default async function handler(req, res) {
-  // Configura CORS para permitir acesso do app mobile
+  // Permite CORS (para o app mobile e web acessarem)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
 
   try {
-    if (req.method === 'GET') {
-      const data = await fs.readFile(filePath, 'utf8');
-      res.status(200).json(JSON.parse(data));
-    } else if (req.method === 'POST') {
-      const novoPedido = req.body;
-      const data = await fs.readFile(filePath, 'utf8');
-      const pedidos = JSON.parse(data);
-      pedidos.push(novoPedido);
-      await fs.writeFile(filePath, JSON.stringify(pedidos, null, 2));
-      res.status(201).json({ message: 'Pedido salvo!' });
+    if (req.method === 'POST') {
+      // Salva o pedido no Firestore
+      const docRef = await addDoc(collection(db, 'pedidos'), req.body);
+      res.status(200).json({ id: docRef.id, message: 'Pedido salvo no Firebase!' });
+    
+    } else if (req.method === 'GET') {
+      // Busca todos os pedidos
+      const snapshot = await getDocs(collection(db, 'pedidos'));
+      const pedidos = [];
+      snapshot.forEach(doc => {
+        pedidos.push({ id: doc.id, ...doc.data() });
+      });
+      res.status(200).json(pedidos);
     }
-  } catch (err) {
-    res.status(500).json({ message: 'Erro no servidor', error: err.message });
+  } catch (error) {
+    console.error("Erro no Firebase:", error);
+    res.status(500).json({ error: "Erro ao processar pedido" });
   }
 }
