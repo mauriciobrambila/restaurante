@@ -120,7 +120,7 @@ export default function RelatorioPedidos({ navigation }) {
       ) : (
         <View style={styles.vazio}>
           <Ionicons name="document-text-outline" size={50} color="#999" />
-          <Text style={styles.vazioTexto}>Nenhum pedido registrado</Text>
+          <Text style={styles.vazioTexto}>Nenhum pedido registrado </Text>
         </View>
       )}
     </View>
