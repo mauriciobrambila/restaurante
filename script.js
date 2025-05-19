@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const produtos = [
-    { id: '1', nome: 'X-Burguer', descricao: 'Pão, carne, queijo e molho especial.', preco: 15.00, img: 'img/xburguer.jpg' },
+    { id: '1', nome:'X-Burguer', descricao:'Pão, carne, queijo e molho especial.', preco:15.00, img:'img/xburguer.jpg' },
     { id: '2', nome: 'Batata Frita', descricao: 'Batata crocante frita.', preco: 10.00, img: 'img/batata.jpg' },
     { id: '3', nome: 'Refrigerante', descricao: 'Refrigerante gelado.', preco: 5.00, img: 'img/refri.jpg' }
   ];
@@ -104,16 +104,12 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function enviarPedidoParaServidor(pedido) {
-  fetch('/api/pedidos', {
+  fetch('https://restaurante-brown.vercel.app/api/pedidos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(pedido)
   })
-    .then(res => res.json())
-    .then(data => {
-      console.log('Pedido enviado:', data);
-    })
-    .catch(err => {
-      console.error('Erro ao enviar pedido:', err);
-    });
+  .then(res => res.json())
+  .then(data => console.log('Pedido enviado:', data))
+  .catch(err => console.error('Erro:', err));
 }

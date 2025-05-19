@@ -24,18 +24,15 @@ export default function RelatorioPedidos({ navigation }) {
       } else {
         // Se falhar, tenta carregar do local
         const dados = await AsyncStorage.getItem('pedidos_finalizados');
-        if (dados) {
-          setPedidos(JSON.parse(dados));
+        if (dadosLocais) setPedidos(JSON.parse(dadosLocais));
         }
+      } catch (error) {
+        console.error('Erro ao buscar pedidos:', error);
+        // Fallback para dados locais
+        const dadosLocais = await AsyncStorage.getItem('pedidos_finalizados');
+        if (dadosLocais) setPedidos(JSON.parse(dadosLocais));
       }
-    } catch (error) {
-      // Se erro de rede, tenta carregar do local
-      const dados = await AsyncStorage.getItem('pedidos_finalizados');
-      if (dados) {
-        setPedidos(JSON.parse(dados));
-      }
-    }
-  };
+    };
 
   const excluirPedido = async (index) => {
     Alert.alert(
