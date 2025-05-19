@@ -89,7 +89,9 @@ export default function RelatorioPedidos({ navigation }) {
         </View>
       ))}
       
-      <Text style={styles.total}>Total: R$ {item.total.toFixed(2)}</Text>
+      <Text style={styles.total}>
+  Total: R$ {item.total ? Number(item.total).toFixed(2) : "0.00"}
+</Text>
     </View>
   );
 
