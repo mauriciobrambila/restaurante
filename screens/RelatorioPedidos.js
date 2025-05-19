@@ -33,50 +33,6 @@ export default function RelatorioPedidos({ navigation }) {
     }
   };
 
-  const excluirPedido = async (index) => {
-    Alert.alert(
-      'Confirmar Exclusão',
-      `Deseja excluir o pedido da Mesa ${pedidos[index].mesa}?`,
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            const novosPedidos = [...pedidos];
-            novosPedidos.splice(index, 1);
-            await AsyncStorage.setItem('pedidos_finalizados', JSON.stringify(novosPedidos));
-            setPedidos(novosPedidos);
-          },
-        },
-      ]
-    );
-  };
-
-  const limparTodosPedidos = async () => {
-    Alert.alert(
-      'Limpar Relatório',
-      'Deseja excluir todos os pedidos?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Limpar Tudo',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem('pedidos_finalizados');
-            setPedidos([]);
-          },
-        },
-      ]
-    );
-  };
-
   const renderItem = ({ item, index }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -85,6 +41,7 @@ export default function RelatorioPedidos({ navigation }) {
           <Ionicons name="trash-outline" size={22} color="#c62828" />
         </TouchableOpacity>
       </View>
+      
       {/* Linha corrigida para formatar a data */}
       <Text style={styles.data}>
         {item.horario ? new Date(item.horario).toLocaleString('pt-BR') : 'Data não disponível'}
@@ -99,7 +56,7 @@ export default function RelatorioPedidos({ navigation }) {
       ))}
       
       <Text style={styles.total}>Total: R$ {item.total.toFixed(2)}</Text>
-      </View>
+    </View>
   );
 
   return (
