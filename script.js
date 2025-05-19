@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function enviarPedidoParaServidor(pedido) {
-  fetch('https://restaurante-git-main-mauricios-projects-27171c20.vercel.app/', {
+  fetch('https://restaurante-brown.vercel.app/api/pedidos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(pedido)
