@@ -2,7 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const produtos = [
     { id: '1', nome:'X-Burguer', descricao:'Pão, carne, queijo e molho especial.', preco:15.00, img:'img/xburguer.jpg' },
     { id: '2', nome: 'Batata Frita', descricao: 'Batata crocante frita.', preco: 10.00, img: 'img/batata.jpg' },
-    { id: '3', nome: 'Refrigerante', descricao: 'Refrigerante gelado.', preco: 5.00, img: 'img/refri.jpg' }
+    { id: '3', nome: 'Refrigerante', descricao: 'Refrigerante gelado.', preco: 5.00, img: 'img/refri.jpg' },
+    { id: '4', nome: 'Cerveja', descricao: 'Cerveja puto malte.', preco: 15.00, img: 'img/cerveja.jpg' }
   ];
 
   const container = document.getElementById('cardapio');
