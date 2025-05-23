@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Cadastrar Produtos Iniciais</title>
-  <!-- Use a versão COMPATÍVEL (8.10.0) -->
+  <title>Cadastrar Produtos</title>
+  <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
+  <!-- Firebase 8.10.0 + Polyfill para Fetch API -->
+  <script src="https://cdn.jsdelivr.net/npm/idb@7/build/umd.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 </head>
 <body>
-  <h1>Cadastrar Produtos no Firebase</h1>
-  <button id="btnCadastrar">Cadastrar Produtos</button>
-  <div id="status" style="margin-top: 20px;"></div>
+  <h1>Cadastrar Produtos</h1>
+  <button id="btnCadastrar" style="padding: 10px 20px; font-size: 16px;">Cadastrar Produtos</button>
+  <div id="status" style="margin: 20px; font-family: monospace;"></div>
 
   <script>
-    // Configuração do Firebase (SUBSTITUA pelos seus dados)
+    // 1. Configuração do Firebase (SUBSTITUA com seus dados)
     const firebaseConfig = {
   apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
   authDomain: "restaurante-e2ff0.firebaseapp.com",
@@ -22,57 +24,98 @@
   appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
 };
 
-    // Inicialize o Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // Lista de produtos para cadastrar
-    const produtos = [
-      { 
-        nome: "X-Burguer", 
-        descricao: "Pão, carne, queijo e molho especial.", 
-        preco: 15.00, 
-        img: "img/xburguer.jpg",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
-      },
-      { 
-        nome: "Batata Frita", 
-        descricao: "Batata crocante frita.", 
-        preco: 10.00, 
-        img: "img/batata.jpg",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
-      },
-      { 
-        nome: "Refrigerante", 
-        descricao: "Refrigerante gelado.", 
-        preco: 5.00, 
-        img: "img/refri.jpg",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+    // 2. Inicialização otimizada
+    function initFirebase() {
+      try {
+        // Verifica se já foi inicializado
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        return firebase.firestore();
+      } catch (error) {
+        console.error("Erro na inicialização:", error);
+        throw error;
       }
+    }
+
+    // 3. Função para testar conexão
+    async function testConnection(db) {
+      try {
+        const testDoc = await db.collection("testConnection").doc("test").get();
+        return true;
+      } catch (error) {
+        console.warn("Teste de conexão falhou:", error);
+        return false;
+      }
+    }
+
+    // 4. Produtos para cadastrar
+    const produtos = [
+      {
+        nome: "X-Burguer",
+        descricao: "Pão, carne, queijo e molho especial.",
+        preco: 15.00,
+        img: "img/xburguer.jpg",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      },
+      // ... outros produtos
     ];
 
+    // 5. Handler do botão com tratamento robusto
     document.getElementById('btnCadastrar').addEventListener('click', async () => {
       const btn = document.getElementById('btnCadastrar');
-      btn.disabled = true;
-      btn.textContent = "Cadastrando...";
-      
       const statusDiv = document.getElementById('status');
-      statusDiv.innerHTML = "<p>Iniciando cadastro...</p>";
+      
+      btn.disabled = true;
+      btn.textContent = "Conectando...";
+      statusDiv.innerHTML = "<p>Iniciando processo...</p>";
 
       try {
-        // Cadastra cada produto
-        for (const produto of produtos) {
-          await db.collection("produtos").add(produto);
-          statusDiv.innerHTML += `<p>✅ ${produto.nome} cadastrado</p>`;
-          console.log("Produto cadastrado:", produto.nome);
-        }
+        // A) Inicializa Firestore
+        const db = initFirebase();
+        statusDiv.innerHTML += "<p>Firebase inicializado</p>";
+
+        // B) Testa conexão
+        btn.textContent = "Testando conexão...";
+        const isConnected = await testConnection(db);
         
-        statusDiv.innerHTML += "<p><strong>Todos os produtos foram cadastrados com sucesso!</strong></p>";
-        alert("Cadastro concluído! Verifique o Firestore.");
-      } catch (error) {
-        console.error("Erro:", error);
-        statusDiv.innerHTML += `<p style="color:red;">❌ Erro: ${error.message}</p>`;
-        alert("Erro ao cadastrar. Verifique o console (F12).");
+        if (!isConnected) {
+          throw new Error("Falha na conexão com o Firestore");
+        }
+
+        statusDiv.innerHTML += "<p>Conexão estabelecida</p>";
+        
+        // C) Cadastra produtos
+        btn.textContent = "Cadastrando...";
+        let successCount = 0;
+
+        for (const produto of produtos) {
+          try {
+            await db.collection("produtos").add(produto);
+            successCount++;
+            statusDiv.innerHTML += `<p>✅ ${produto.nome} cadastrado</p>`;
+          } catch (productError) {
+            console.error(`Erro no produto ${produto.nome}:`, productError);
+            statusDiv.innerHTML += `<p>⚠️ ${produto.nome} falhou: ${productError.message}</p>`;
+          }
+        }
+
+        // D) Resultado final
+        statusDiv.innerHTML += `<p><strong>Concluído! ${successCount}/${produtos.length} produtos cadastrados</strong></p>`;
+        alert(`${successCount} produtos cadastrados com sucesso!`);
+
+      } catch (mainError) {
+        console.error("Erro principal:", mainError);
+        statusDiv.innerHTML += `
+          <p style="color:red;">❌ ERRO CRÍTICO:</p>
+          <p>${mainError.message}</p>
+          <p>Verifique:</p>
+          <ul>
+            <li>Conexão com a internet</li>
+            <li>Regras do Firestore</li>
+            <li>Configuração do Firebase</li>
+          </ul>
+        `;
       } finally {
         btn.disabled = false;
         btn.textContent = "Cadastrar Produtos";
