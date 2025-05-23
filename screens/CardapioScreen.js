@@ -3,6 +3,19 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react
 import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
+  authDomain: "restaurante-e2ff0.firebaseapp.com",
+  projectId: "restaurante-e2ff0",
+  storageBucket: "restaurante-e2ff0.firebasestorage.app",
+  messagingSenderId: "839289505253",
+  appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const imagens = {
   'xburguer.jpg': require('../img/xburguer.jpg'),
@@ -16,44 +29,30 @@ export default function CardapioScreen({ navigation }) {
 
   useEffect(() => {
     const carregarProdutos = async () => {
-      const dados = await AsyncStorage.getItem('produtos');
-      if (dados) {
-        setProdutos(JSON.parse(dados));
-      } else {
-        const dadosExemplo = [
-          {
-            id: '1',
-            nome: 'X-Burguer',
-            descricao: 'Pão, carne, queijo e salada',
-            preco: 15.00,
-            imagem: 'xburguer.jpg',
-          },
-          {
-            id: '2',
-            nome: 'Batata Frita',
-            descricao: 'Batata crocante frita',
-            preco: 10.00,
-            imagem: 'batata.jpg',
-          },
-          {
-            id: '3',
-            nome: 'Refrigerante',
-            descricao: 'Refrigerante gelado',
-            preco: 5.00,
-            imagem: 'refri.jpg',
-          },
-          {
-            id: '4',
-            nome: 'Cerveja',
-            descricao: 'Cerveja puro malte',
-            preco: 15.00,
-            imagem: 'cerveja.jpg',
-          },
-        ];
-        await AsyncStorage.setItem('produtos', JSON.stringify(dadosExemplo));
-        setProdutos(dadosExemplo);
+      try {
+        // Tenta carregar do Firebase primeiro
+        const querySnapshot = await getDocs(collection(db, "produtos"));
+        const produtosFirebase = [];
+        querySnapshot.forEach((doc) => {
+          produtosFirebase.push({ id: doc.id, ...doc.data() });
+        });
+        
+        if (produtosFirebase.length > 0) {
+          setProdutos(produtosFirebase);
+          await AsyncStorage.setItem('produtos', JSON.stringify(produtosFirebase));
+        } else {
+          // Fallback para dados locais
+          const dados = await AsyncStorage.getItem('produtos');
+          if (dados) setProdutos(JSON.parse(dados));
+        }
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+        // Fallback para dados locais
+        const dados = await AsyncStorage.getItem('produtos');
+        if (dados) setProdutos(JSON.parse(dados));
       }
     };
+    
     carregarProdutos();
   }, []);
 

@@ -1,10 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, 
-  KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, 
+  Platform, Image } from 'react-native';
 import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import * as ImageManipulator from 'expo-image-manipulator';
+
+// Configuração do Firebase (substitua com suas credenciais)
+const firebaseConfig = {
+  apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
+  authDomain: "restaurante-e2ff0.firebaseapp.com",
+  projectId: "restaurante-e2ff0",
+  storageBucket: "restaurante-e2ff0.firebasestorage.app",
+  messagingSenderId: "839289505253",
+  appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
+};
+
+// Inicialize o Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 export default function AdminDashboard({ navigation }) {
   const [nome, setNome] = useState('');
@@ -12,111 +29,192 @@ export default function AdminDashboard({ navigation }) {
   const [preco, setPreco] = useState('');
   const [imagem, setImagem] = useState('');
   const [produtos, setProdutos] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     carregarProdutos();
   }, []);
 
   const carregarProdutos = async () => {
-    const dados = await AsyncStorage.getItem('produtos');
-    if (dados) {
-      setProdutos(JSON.parse(dados));
+    setLoading(true);
+    try {
+      // Tenta carregar do Firebase primeiro
+      const querySnapshot = await getDocs(collection(db, "produtos"));
+      const produtosFirebase = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setProdutos(produtosFirebase);
+      await AsyncStorage.setItem('produtos', JSON.stringify(produtosFirebase));
+    } catch (error) {
+      console.error("Erro ao carregar do Firebase:", error);
+      // Fallback para dados locais
+      const dadosLocais = await AsyncStorage.getItem('produtos');
+      if (dadosLocais) {
+        setProdutos(JSON.parse(dadosLocais));
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const salvarProdutos = async (novosProdutos) => {
-    await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
-    setProdutos(novosProdutos);
+  const processarImagem = async (uri) => {
+    try {
+      // Redimensiona a imagem para otimização
+      const imagemProcessada = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return imagemProcessada.uri;
+    } catch (error) {
+      console.error("Erro ao processar imagem:", error);
+      return uri; // Retorna a original se falhar
+    }
   };
 
-  const adicionarProduto = () => {
-    if (!nome || !descricao || !preco || !imagem) {
-      Alert.alert('Erro', 'Preencha todos os campos!');
+  const adicionarProduto = async () => {
+    if (!nome || !descricao || !preco) {
+      Alert.alert('Erro', 'Preencha nome, descrição e preço!');
       return;
     }
 
-    const novo = {
-      id: Date.now().toString(),
-      nome,
-      descricao,
-      preco: parseFloat(preco),
-      imagem
-    };
+    try {
+      setLoading(true);
+      
+      // Cria objeto do produto
+      const novoProduto = {
+        nome,
+        descricao,
+        preco: parseFloat(preco),
+        imagem: imagem || 'sem-imagem.jpg',
+        createdAt: new Date().toISOString()
+      };
 
-    const atualizados = [...produtos, novo];
-    salvarProdutos(atualizados);
-    setNome('');
-    setDescricao('');
-    setPreco('');
-    setImagem('');
+      // Adiciona ao Firebase
+      const docRef = await addDoc(collection(db, "produtos"), novoProduto);
+      const produtoComId = { ...novoProduto, id: docRef.id };
+
+      // Atualiza estado local
+      const novosProdutos = [...produtos, produtoComId];
+      setProdutos(novosProdutos);
+      await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
+
+      // Limpa o formulário
+      setNome('');
+      setDescricao('');
+      setPreco('');
+      setImagem('');
+
+      Alert.alert('Sucesso', 'Produto adicionado localmente e na nuvem!');
+    } catch (error) {
+      console.error("Erro ao adicionar produto:", error);
+      Alert.alert(
+        'Erro', 
+        'Produto foi salvo localmente, mas não na nuvem. Verifique sua conexão.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const excluirProduto = (id) => {
-    Alert.alert('Excluir Produto', 'Remover este produto?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: () => {
-          const filtrados = produtos.filter((p) => p.id !== id);
-          salvarProdutos(filtrados);
-        },
-      },
-    ]);
+  const excluirProduto = async (id) => {
+    Alert.alert(
+      'Confirmar Exclusão',
+      'Deseja remover este produto de todos os dispositivos?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              // Remove do Firebase
+              await deleteDoc(doc(db, "produtos", id));
+              
+              // Remove localmente
+              const novosProdutos = produtos.filter(p => p.id !== id);
+              setProdutos(novosProdutos);
+              await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
+            } catch (error) {
+              console.error("Erro ao excluir:", error);
+              Alert.alert('Erro', 'Não foi possível excluir da nuvem');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const selecionarImagem = async () => {
-    Alert.alert('Selecionar Imagem', 'Escolha local da imagem', [
-      {
-        text: 'Galeria',
-        onPress: async () => {
-          const resultado = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-          });
+    Alert.alert(
+      'Selecionar Imagem',
+      'Escolha a fonte da imagem',
+      [
+        {
+          text: 'Galeria',
+          onPress: async () => {
+            const resultado = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 1,
+            });
 
-          if (!resultado.canceled) {
-            setImagem(resultado.assets[0].uri);
+            if (!resultado.canceled) {
+              const uriProcessada = await processarImagem(resultado.assets[0].uri);
+              setImagem(uriProcessada);
+            }
           }
         },
-      },
-      {
-        text: 'Câmera',
-        onPress: async () => {
-          const permissao = await ImagePicker.requestCameraPermissionsAsync();
-          if (permissao.granted === false) {
-            Alert.alert('Permissão negada', 'É necessário permitir o acesso à câmera');
-            return;
-          }
+        {
+          text: 'Câmera',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permissão necessária', 'Precisamos acessar sua câmera');
+              return;
+            }
 
-          const resultado = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-          });
+            const resultado = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 0.7,
+            });
 
-          if (!resultado.canceled) {
-            setImagem(resultado.assets[0].uri);
+            if (!resultado.canceled) {
+              const uriProcessada = await processarImagem(resultado.assets[0].uri);
+              setImagem(uriProcessada);
+            }
           }
         },
-      },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+        { text: 'Cancelar', style: 'cancel' }
+      ]
+    );
   };
 
   const renderItem = ({ item }) => (
     <View style={styles.item}>
       {item.imagem && (
-        <Image source={{ uri: item.imagem }} style={styles.imagemPreview} />
+        <Image 
+          source={{ uri: item.imagem }} 
+          style={styles.imagemPreview} 
+          onError={() => console.log("Erro ao carregar imagem")}
+        />
       )}
       <View style={{ flex: 1 }}>
         <Text style={styles.nome}>{item.nome}</Text>
         <Text style={styles.desc}>{item.descricao}</Text>
         <Text style={styles.preco}>R$ {item.preco.toFixed(2)}</Text>
       </View>
-      <TouchableOpacity onPress={() => excluirProduto(item.id)}>
+      <TouchableOpacity 
+        onPress={() => excluirProduto(item.id)}
+        disabled={loading}
+      >
         <Ionicons name="trash" size={25} color="#c62828" />
       </TouchableOpacity>
     </View>
@@ -127,16 +225,16 @@ export default function AdminDashboard({ navigation }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-     <View style={{ marginBottom: -10, marginVertical: 30  }}>
-  <Header 
-    title="Painel do Administrador" 
-    showBackButton={true} 
-    onBackPress={() => navigation.goBack()}
-  />
-</View>
+      <View style={{ marginBottom: -10, marginVertical: 30 }}>
+        <Header 
+          title="Painel do Administrador" 
+          showBackButton={true} 
+          onBackPress={() => navigation.goBack()}
+        />
+      </View>
 
       <View style={styles.container}>
-        <Text style={styles.sectionTitle}>      Adicionar Novo Produto</Text>
+        <Text style={styles.sectionTitle}>Adicionar Novo Produto</Text>
         
         <Text style={styles.label}>Nome do Produto</Text>
         <TextInput
@@ -145,6 +243,7 @@ export default function AdminDashboard({ navigation }) {
           style={styles.input}
           placeholder="Ex: X-Burguer"
           placeholderTextColor="#999"
+          editable={!loading}
         />
 
         <Text style={styles.label}>Descrição</Text>
@@ -155,6 +254,7 @@ export default function AdminDashboard({ navigation }) {
           placeholder="Ex: Pão, carne, queijo..."
           placeholderTextColor="#999"
           multiline
+          editable={!loading}
         />
 
         <Text style={styles.label}>Preço</Text>
@@ -165,10 +265,15 @@ export default function AdminDashboard({ navigation }) {
           keyboardType="decimal-pad"
           placeholder="Ex: 18.50"
           placeholderTextColor="#999"
+          editable={!loading}
         />
 
         <Text style={styles.label}>Imagem</Text>
-        <TouchableOpacity style={styles.imagePicker} onPress={selecionarImagem}>
+        <TouchableOpacity 
+          style={styles.imagePicker} 
+          onPress={selecionarImagem}
+          disabled={loading}
+        >
           <Text style={styles.imagePickerText}>
             {imagem ? 'Imagem selecionada' : 'Selecionar da galeria ou câmera'}
           </Text>
@@ -176,23 +281,36 @@ export default function AdminDashboard({ navigation }) {
         </TouchableOpacity>
 
         {imagem && (
-          <Image source={{ uri: imagem }} style={styles.selectedImagePreview} />
+          <Image 
+            source={{ uri: imagem }} 
+            style={styles.selectedImagePreview} 
+            resizeMode="cover"
+          />
         )}
 
-        <TouchableOpacity style={styles.btn} onPress={adicionarProduto}>
-          <Text style={styles.btnTexto}>Adicionar Produto </Text>
-          <Ionicons name="add-circle" size={30} color="#fff" />
+        <TouchableOpacity 
+          style={[styles.btn, loading && { opacity: 0.7 }]} 
+          onPress={adicionarProduto}
+          disabled={loading}
+        >
+          <Text style={styles.btnTexto}>
+            {loading ? 'Salvando...' : 'Adicionar Produto'}
+          </Text>
+          {!loading && <Ionicons name="add-circle" size={30} color="#fff" />}
         </TouchableOpacity>
 
         <TouchableOpacity 
-  style={[styles.btn, {backgroundColor: '#3f51b5', marginBottom: 15}]}
-  onPress={() => navigation.navigate('RelatorioPedidos')}
->
-  <Text style={styles.btnTexto}>Ver Relatório de Pedidos</Text>
-</TouchableOpacity>
+          style={[styles.btn, {backgroundColor: '#3f51b5', marginBottom: 15}]}
+          onPress={() => navigation.navigate('RelatorioPedidos')}
+          disabled={loading}
+        >
+          <Text style={styles.btnTexto}>Ver Relatório de Pedidos</Text>
+        </TouchableOpacity>
         
         {produtos.length === 0 ? (
-          <Text style={styles.emptyText}>Nenhum produto cadastrado</Text>
+          <Text style={styles.emptyText}>
+            {loading ? 'Carregando...' : 'Nenhum produto cadastrado'}
+          </Text>
         ) : (
           <FlatList
             data={produtos}
@@ -200,6 +318,8 @@ export default function AdminDashboard({ navigation }) {
             renderItem={renderItem}
             style={{ marginTop: 15 }}
             contentContainerStyle={{ paddingBottom: 10 }}
+            refreshing={loading}
+            onRefresh={carregarProdutos}
           />
         )}
       </View>
