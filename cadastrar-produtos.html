@@ -23,8 +23,11 @@
   appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
 };
     // Inicialize o Firebase
+    try {
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    
+    console.log("Firebase inicializado com sucesso!"); // Verifique no console
 
     // Produtos que serão cadastrados (os mesmos do seu script.js)
     const produtos = [
@@ -52,24 +55,43 @@
     ];
 
     document.getElementById('btnCadastrar').addEventListener('click', async () => {
+      console.log("Botão clicado - Iniciando cadastro...");
+      
       try {
         const statusDiv = document.getElementById('status');
-        statusDiv.innerHTML = "Cadastrando produtos...";
+        statusDiv.innerHTML = "Conectando ao Firebase...";
         
-        // Cadastra cada produto
+        // Teste de conexão
+        const testDoc = await db.collection("teste").doc("conexao").get();
+        console.log("Teste de conexão:", testDoc.exists ? "OK" : "Não existe (mas conectou)");
+        
+        // Cadastra produtos
+        statusDiv.innerHTML += "<p>Cadastrando produtos...</p>";
+        
         for (const produto of produtos) {
-          await db.collection("produtos").add(produto);
-          statusDiv.innerHTML += `<p>✅ ${produto.nome} cadastrado</p>`;
-          console.log("Produto cadastrado:", produto.nome);
+          const docRef = await db.collection("produtos").add(produto);
+          console.log(`Produto ${produto.nome} cadastrado com ID:`, docRef.id);
+          statusDiv.innerHTML += `<p>✅ ${produto.nome} cadastrado (ID: ${docRef.id})</p>`;
         }
         
-        statusDiv.innerHTML += "<p><strong>Todos os produtos foram cadastrados com sucesso!</strong></p>";
-        alert("Produtos cadastrados! Você já pode fechar esta página.");
+        statusDiv.innerHTML += "<p><strong>✅ Todos cadastrados!</strong></p>";
+      
       } catch (error) {
-        console.error("Erro:", error);
-        document.getElementById('status').innerHTML = `❌ Erro: ${error.message}`;
+        console.error("Erro detalhado:", error);
+        document.getElementById('status').innerHTML = `
+          <p style="color:red;">❌ ERRO GRAVE:</p>
+          <p>${error.message}</p>
+          <p>Verifique o console (F12) para detalhes</p>
+        `;
       }
     });
-  </script>
-</body>
-</html>
+
+  } catch (initError) {
+    console.error("Erro na inicialização do Firebase:", initError);
+    document.body.innerHTML = `
+      <h1 style="color:red;">Erro na configuração do Firebase</h1>
+      <p>${initError.message}</p>
+      <p>Verifique o console (F12) para detalhes</p>
+    `;
+  }
+</script>
