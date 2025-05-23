@@ -42,6 +42,13 @@ export default function CardapioScreen({ navigation }) {
             preco: 5.00,
             imagem: 'refri.jpg',
           },
+          {
+            id: '4',
+            nome: 'Cerveja',
+            descricao: 'Cerveja puro malte',
+            preco: 15.00,
+            imagem: 'cerveja.jpg',
+          },
         ];
         await AsyncStorage.setItem('produtos', JSON.stringify(dadosExemplo));
         setProdutos(dadosExemplo);
