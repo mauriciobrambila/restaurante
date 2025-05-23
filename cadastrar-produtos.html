@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cadastrar Produtos Iniciais</title>
+</head>
+<body>
+  <h1>Cadastrar Produtos no Firebase</h1>
+  <button id="btnCadastrar">Cadastrar Produtos</button>
+  <div id="status"></div>
+
+  <!-- Adicione os scripts do Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js"></script>
+
+  <script>
+   
+    const firebaseConfig = {
+  apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
+  authDomain: "restaurante-e2ff0.firebaseapp.com",
+  projectId: "restaurante-e2ff0",
+  storageBucket: "restaurante-e2ff0.firebasestorage.app",
+  messagingSenderId: "839289505253",
+  appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
+};
+    // Inicialize o Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Produtos que serão cadastrados (os mesmos do seu script.js)
+    const produtos = [
+      { 
+        nome: "X-Burguer", 
+        descricao: "Pão, carne, queijo e molho especial.", 
+        preco: 15.00, 
+        img: "img/xburguer.jpg",
+        createdAt: new Date().toISOString() 
+      },
+      { 
+        nome: "Batata Frita", 
+        descricao: "Batata crocante frita.", 
+        preco: 10.00, 
+        img: "img/batata.jpg",
+        createdAt: new Date().toISOString() 
+      },
+      { 
+        nome: "Refrigerante", 
+        descricao: "Refrigerante gelado.", 
+        preco: 5.00, 
+        img: "img/refri.jpg",
+        createdAt: new Date().toISOString() 
+      }
+    ];
+
+    document.getElementById('btnCadastrar').addEventListener('click', async () => {
+      try {
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = "Cadastrando produtos...";
+        
+        // Cadastra cada produto
+        for (const produto of produtos) {
+          await db.collection("produtos").add(produto);
+          statusDiv.innerHTML += `<p>✅ ${produto.nome} cadastrado</p>`;
+          console.log("Produto cadastrado:", produto.nome);
+        }
+        
+        statusDiv.innerHTML += "<p><strong>Todos os produtos foram cadastrados com sucesso!</strong></p>";
+        alert("Produtos cadastrados! Você já pode fechar esta página.");
+      } catch (error) {
+        console.error("Erro:", error);
+        document.getElementById('status').innerHTML = `❌ Erro: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>

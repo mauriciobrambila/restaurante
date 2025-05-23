@@ -5,6 +5,20 @@ import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
+  authDomain: "restaurante-e2ff0.firebaseapp.com",
+  projectId: "restaurante-e2ff0",
+  storageBucket: "restaurante-e2ff0.firebasestorage.app",
+  messagingSenderId: "839289505253",
+  appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
+};
+// Inicialize o Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 export default function AdminDashboard({ navigation }) {
   const [nome, setNome] = useState('');
@@ -12,54 +26,102 @@ export default function AdminDashboard({ navigation }) {
   const [preco, setPreco] = useState('');
   const [imagem, setImagem] = useState('');
   const [produtos, setProdutos] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+    useEffect(() => {
     carregarProdutos();
   }, []);
 
   const carregarProdutos = async () => {
-    const dados = await AsyncStorage.getItem('produtos');
-    if (dados) {
-      setProdutos(JSON.parse(dados));
+    setLoading(true);
+    try {
+      // Tenta carregar do Firebase primeiro
+      const querySnapshot = await getDocs(collection(db, "produtos"));
+      const produtosFirebase = [];
+      querySnapshot.forEach((doc) => {
+        produtosFirebase.push({ id: doc.id, ...doc.data() });
+      });
+      
+      if (produtosFirebase.length > 0) {
+        setProdutos(produtosFirebase);
+        await AsyncStorage.setItem('produtos', JSON.stringify(produtosFirebase));
+      } else {
+        // Fallback para dados locais
+        const dados = await AsyncStorage.getItem('produtos');
+        if (dados) setProdutos(JSON.parse(dados));
+      }
+    } catch (error) {
+      console.error("Erro ao carregar produtos:", error);
+      // Fallback para dados locais
+      const dados = await AsyncStorage.getItem('produtos');
+      if (dados) setProdutos(JSON.parse(dados));
+    } finally {
+      setLoading(false);
     }
   };
 
-  const salvarProdutos = async (novosProdutos) => {
-    await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
-    setProdutos(novosProdutos);
-  };
-
-  const adicionarProduto = () => {
+  const adicionarProduto = async () => {
     if (!nome || !descricao || !preco || !imagem) {
       Alert.alert('Erro', 'Preencha todos os campos!');
       return;
     }
 
-    const novo = {
-      id: Date.now().toString(),
-      nome,
-      descricao,
-      preco: parseFloat(preco),
-      imagem
-    };
+    try {
+      setLoading(true);
+      const novoProduto = {
+        nome,
+        descricao,
+        preco: parseFloat(preco),
+        imagem,
+        createdAt: new Date().toISOString()
+      };
 
-    const atualizados = [...produtos, novo];
-    salvarProdutos(atualizados);
-    setNome('');
-    setDescricao('');
-    setPreco('');
-    setImagem('');
+      // Adiciona ao Firebase
+      const docRef = await addDoc(collection(db, "produtos"), novoProduto);
+      
+      // Atualiza estado local
+      const produtoComId = { ...novoProduto, id: docRef.id };
+      const novosProdutos = [...produtos, produtoComId];
+      
+      setProdutos(novosProdutos);
+      await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
+      
+      setNome('');
+      setDescricao('');
+      setPreco('');
+      setImagem('');
+      
+      Alert.alert('Sucesso', 'Produto adicionado ao cardápio online!');
+    } catch (error) {
+      console.error("Erro ao adicionar produto:", error);
+      Alert.alert('Erro', 'Não foi possível adicionar o produto');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const excluirProduto = (id) => {
+  const excluirProduto = async (id) => {
     Alert.alert('Excluir Produto', 'Remover este produto?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
         style: 'destructive',
-        onPress: () => {
-          const filtrados = produtos.filter((p) => p.id !== id);
-          salvarProdutos(filtrados);
+        onPress: async () => {
+          try {
+            setLoading(true);
+            // Remove do Firebase
+            await deleteDoc(doc(db, "produtos", id));
+            
+            // Atualiza estado local
+            const filtrados = produtos.filter((p) => p.id !== id);
+            setProdutos(filtrados);
+            await AsyncStorage.setItem('produtos', JSON.stringify(filtrados));
+          } catch (error) {
+            console.error("Erro ao excluir produto:", error);
+            Alert.alert('Erro', 'Não foi possível excluir o produto');
+          } finally {
+            setLoading(false);
+          }
         },
       },
     ]);
@@ -127,13 +189,13 @@ export default function AdminDashboard({ navigation }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-     <View style={{ marginBottom: -10, marginVertical: 30  }}>
-  <Header 
-    title="Painel do Administrador" 
-    showBackButton={true} 
-    onBackPress={() => navigation.goBack()}
-  />
-</View>
+      <View style={{ marginBottom: -10, marginVertical: 30 }}>
+        <Header 
+          title="Painel do Administrador" 
+          showBackButton={true} 
+          onBackPress={() => navigation.goBack()}
+        />
+      </View>
 
       <View style={styles.container}>
         <Text style={styles.sectionTitle}>      Adicionar Novo Produto</Text>
@@ -179,9 +241,15 @@ export default function AdminDashboard({ navigation }) {
           <Image source={{ uri: imagem }} style={styles.selectedImagePreview} />
         )}
 
-        <TouchableOpacity style={styles.btn} onPress={adicionarProduto}>
-          <Text style={styles.btnTexto}>Adicionar Produto </Text>
-          <Ionicons name="add-circle" size={30} color="#fff" />
+<TouchableOpacity 
+          style={styles.btn} 
+          onPress={adicionarProduto}
+          disabled={loading}
+        >
+          <Text style={styles.btnTexto}>
+            {loading ? 'Salvando...' : 'Adicionar Produto'}
+          </Text>
+          {!loading && <Ionicons name="add-circle" size={30} color="#fff" />}
         </TouchableOpacity>
 
         <TouchableOpacity 
