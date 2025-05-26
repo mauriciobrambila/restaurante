@@ -19,9 +19,21 @@ const firebaseConfig = {
   appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
 };
 
-// Inicialize o Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// No início do arquivo (após os imports)
+let app;
+let db;
+
+try {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+  } else {
+    app = getApp();
+    db = getFirestore();
+  }
+} catch (error) {
+  console.error("Erro ao inicializar Firebase:", error);
+}
 
 export default function AdminDashboard({ navigation }) {
   const [nome, setNome] = useState('');

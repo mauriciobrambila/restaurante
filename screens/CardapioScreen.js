@@ -6,7 +6,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
-// Configuração do Firebase (use a mesma do AdminDashboard)
+// Limpa instâncias existentes (apenas para desenvolvimento)
+try {
+  deleteApp(getApp());
+} catch (e) {
+  console.log("Nenhuma instância para limpar");
+}
+
+// Agora inicialize
+const app = initializeApp(firebaseConfig);
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "SEU_PROJETO.firebaseapp.com",
@@ -15,10 +23,6 @@ const firebaseConfig = {
   messagingSenderId: "SEU_SENDER_ID",
   appId: "SEU_APP_ID"
 };
-
-// Inicialize o Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 export default function CardapioScreen({ navigation }) {
   const [produtos, setProdutos] = useState([]);
