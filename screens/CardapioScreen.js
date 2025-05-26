@@ -1,104 +1,132 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
-const imagens = {
-  'xburguer.jpg': require('../img/xburguer.jpg'),
-  'batata.jpg': require('../img/batata.jpg'),
-  'refri.jpg': require('../img/refri.jpg'),
+// Limpa instâncias existentes (apenas para desenvolvimento)
+try {
+  deleteApp(getApp());
+} catch (e) {
+  console.log("Nenhuma instância para limpar");
+}
+
+// Agora inicialize
+const app = initializeApp(firebaseConfig);
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJETO_ID",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId: "SEU_APP_ID"
 };
 
 export default function CardapioScreen({ navigation }) {
   const [produtos, setProdutos] = useState([]);
   const [pedido, setPedido] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const carregarProdutos = async () => {
-      const dados = await AsyncStorage.getItem('produtos');
-      if (dados) {
-        setProdutos(JSON.parse(dados));
-      } else {
-        const dadosExemplo = [
-          {
-            id: '1',
-            nome: 'X-Burguer',
-            descricao: 'Pão, carne, queijo e salada',
-            preco: 15.00,
-            imagem: 'xburguer.jpg',
-          },
-          {
-            id: '2',
-            nome: 'Batata Frita',
-            descricao: 'Batata crocante frita',
-            preco: 10.00,
-            imagem: 'batata.jpg',
-          },
-          {
-            id: '3',
-            nome: 'Refrigerante',
-            descricao: 'Refrigerante gelado',
-            preco: 5.00,
-            imagem: 'refri.jpg',
-          },
-          {
-            id: '4',
-            nome: 'Cerveja',
-            descricao: 'Cerveja puro malte',
-            preco: 15.00,
-            imagem: 'cerveja.jpg',
-          },
-        ];
-        await AsyncStorage.setItem('produtos', JSON.stringify(dadosExemplo));
-        setProdutos(dadosExemplo);
+      setLoading(true);
+      try {
+        // Tenta carregar do Firebase primeiro
+        const querySnapshot = await getDocs(collection(db, "produtos"));
+        const produtosFirebase = [];
+        
+        querySnapshot.forEach((doc) => {
+          produtosFirebase.push({
+            id: doc.id,
+            nome: doc.data().nome,
+            descricao: doc.data().descricao,
+            preco: doc.data().preco,
+            imagem: doc.data().imagem || 'sem-imagem.jpg'
+          });
+        });
+
+        if (produtosFirebase.length > 0) {
+          setProdutos(produtosFirebase);
+          await AsyncStorage.setItem('produtos', JSON.stringify(produtosFirebase));
+        } else {
+          // Fallback para dados locais
+          const dadosLocais = await AsyncStorage.getItem('produtos');
+          if (dadosLocais) {
+            setProdutos(JSON.parse(dadosLocais));
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+        setError("Não foi possível carregar o cardápio online");
+        
+        // Fallback para dados locais
+        const dadosLocais = await AsyncStorage.getItem('produtos');
+        if (dadosLocais) {
+          setProdutos(JSON.parse(dadosLocais));
+        }
+      } finally {
+        setLoading(false);
       }
     };
+
     carregarProdutos();
   }, []);
 
   const adicionarAoPedido = (produto) => {
-    const existe = pedido.find((p) => p.id === produto.id);
-    if (existe) {
-      const atualizados = pedido.map((p) =>
-        p.id === produto.id ? { ...p, quantidade: p.quantidade + 1 } : p
-      );
-      setPedido(atualizados);
-    } else {
-      setPedido([...pedido, { ...produto, quantidade: 1 }]);
-    }
+    setPedido(prevPedido => {
+      const existe = prevPedido.find((p) => p.id === produto.id);
+      if (existe) {
+        return prevPedido.map((p) =>
+          p.id === produto.id ? { ...p, quantidade: p.quantidade + 1 } : p
+        );
+      }
+      return [...prevPedido, { ...produto, quantidade: 1 }];
+    });
   };
 
   const removerDoPedido = (produto) => {
-    const existe = pedido.find((p) => p.id === produto.id);
-    if (existe) {
+    setPedido(prevPedido => {
+      const existe = prevPedido.find((p) => p.id === produto.id);
+      if (!existe) return prevPedido;
+      
       if (existe.quantidade > 1) {
-        const atualizados = pedido.map((p) =>
+        return prevPedido.map((p) =>
           p.id === produto.id ? { ...p, quantidade: p.quantidade - 1 } : p
         );
-        setPedido(atualizados);
-      } else {
-        const atualizados = pedido.filter((p) => p.id !== produto.id);
-        setPedido(atualizados);
       }
-    }
+      return prevPedido.filter((p) => p.id !== produto.id);
+    });
   };
 
   const renderItem = ({ item }) => {
     const quantidade = pedido.find((p) => p.id === item.id)?.quantidade || 0;
-    const imagem = imagens[item.imagem] || require('../img/xburguer.jpg');
-
+    
     return (
       <View style={styles.item}>
-        <Image source={imagem} style={styles.imagem} />
+        <Image 
+          source={{ uri: item.imagem }} 
+          style={styles.imagem}
+          defaultSource={require('../img/sem-imagem.jpg')}
+          onError={() => console.log("Erro ao carregar imagem")}
+        />
         <View style={{ flex: 1 }}>
           <Text style={styles.nome}>{item.nome}</Text>
           <Text style={styles.desc}>{item.descricao}</Text>
           <Text style={styles.preco}>R$ {item.preco.toFixed(2)}</Text>
         </View>
         <View style={styles.contador}>
-          <TouchableOpacity onPress={() => removerDoPedido(item)}>
-            <Ionicons name="remove-circle-outline" size={26} color="#c62828" />
+          <TouchableOpacity 
+            onPress={() => removerDoPedido(item)}
+            disabled={quantidade === 0}
+          >
+            <Ionicons 
+              name="remove-circle-outline" 
+              size={26} 
+              color={quantidade === 0 ? "#ccc" : "#c62828"} 
+            />
           </TouchableOpacity>
           <Text style={styles.quantidade}>{quantidade}</Text>
           <TouchableOpacity onPress={() => adicionarAoPedido(item)}>
@@ -114,25 +142,52 @@ export default function CardapioScreen({ navigation }) {
     navigation.navigate('Pedido', { pedido });
   };
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2e7d32" />
+        <Text style={{ marginTop: 10 }}>Carregando cardápio...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#c62828', marginBottom: 10 }}>{error}</Text>
+        <Text>Usando cardápio local</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <Header 
-        title="Cardapio" 
+        title="Cardápio" 
         showBackButton={true} 
         onBackPress={() => navigation.goBack()}
       />
+      
       <FlatList
         data={produtos}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.lista}
+        ListEmptyComponent={
+          <View style={{ alignItems: 'center', marginTop: 50 }}>
+            <Text style={{ color: '#666' }}>Nenhum produto disponível</Text>
+          </View>
+        }
       />
+      
       {pedido.length > 0 && (
         <TouchableOpacity 
           style={styles.btn} 
           onPress={irParaPedido}
         >
-          <Text style={styles.btnTexto}>Finalizar Pedido ({pedido.length} itens)</Text>
+          <Text style={styles.btnTexto}>
+            Finalizar Pedido ({pedido.reduce((total, item) => total + item.quantidade, 0)} itens)
+          </Text>
         </TouchableOpacity>
       )}
     </View>
