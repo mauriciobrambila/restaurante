@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, 
-  Platform, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, 
+  KeyboardAvoidingView, Platform, Image } from 'react-native';
 import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { app } from '../firebaseConfig'; // Importe sua configuração do Firebase
 
 export default function AdminDashboard({ navigation }) {
   const [nome, setNome] = useState('');
@@ -12,56 +14,103 @@ export default function AdminDashboard({ navigation }) {
   const [preco, setPreco] = useState('');
   const [imagem, setImagem] = useState('');
   const [produtos, setProdutos] = useState([]);
+  const storage = getStorage(app); // Inicializa o Firebase Storage
 
   // Carrega produtos do Firebase + cache local
   const carregarProdutos = async () => {
-    const dados = await AsyncStorage.getItem('produtos');
-    if (dados) {
-      setProdutos(JSON.parse(dados));
+    try {
+      const response = await fetch('https://restaurante-brown.vercel.app/api/pedidos?action=getProdutos');
+      const data = await response.json();
+      setProdutos(data);
+      await AsyncStorage.setItem('produtos', JSON.stringify(data));
+    } catch (error) {
+      const dados = await AsyncStorage.getItem('produtos');
+      if (dados) setProdutos(JSON.parse(dados));
     }
   };
 
-  const salvarProdutos = async (novosProdutos) => {
-    await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
-    setProdutos(novosProdutos);
+  // Upload de imagem para o Firebase Storage
+  const uploadImagem = async (uri) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const storageRef = ref(storage, `produtos/${Date.now()}.jpg`);
+      await uploadBytes(storageRef, blob);
+      return await getDownloadURL(storageRef);
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      Alert.alert("Erro", "Não foi possível enviar a imagem");
+      return null;
+    }
   };
 
-  const adicionarProduto = () => {
+  // Adiciona produto ao Firebase
+  const adicionarProduto = async () => {
     if (!nome || !descricao || !preco || !imagem) {
       Alert.alert('Erro', 'Preencha todos os campos!');
       return;
     }
 
-    const novo = {
-      id: Date.now().toString(),
-      nome,
-      descricao,
-      preco: parseFloat(preco),
-      imagem
-    };
+    try {
+      const imagemUrl = await uploadImagem(imagem);
+      if (!imagemUrl) return;
 
-    const atualizados = [...produtos, novo];
-    salvarProdutos(atualizados);
-    setNome('');
-    setDescricao('');
-    setPreco('');
-    setImagem('');
+      const novoProduto = {
+        nome,
+        descricao,
+        preco: parseFloat(preco),
+        imagem: imagemUrl, // URL pública da imagem
+        id: Date.now().toString(),
+      };
+
+      // Envia para o Firebase
+      await fetch('https://restaurante-brown.vercel.app/api/pedidos?action=addProduto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novoProduto),
+      });
+
+      // Atualiza localmente
+      const novosProdutos = [...produtos, novoProduto];
+      setProdutos(novosProdutos);
+      await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
+
+      // Limpa o formulário
+      setNome('');
+      setDescricao('');
+      setPreco('');
+      setImagem('');
+      
+    } catch (error) {
+      console.error("Erro ao adicionar produto:", error);
+      Alert.alert("Erro", "Não foi possível salvar o produto");
+    }
   };
 
-  const excluirProduto = (id) => {
+  // Remove produto do Firebase
+  const excluirProduto = async (id) => {
     Alert.alert('Excluir Produto', 'Remover este produto?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
-        style: 'destructive',
-        onPress: () => {
-          const filtrados = produtos.filter((p) => p.id !== id);
-          salvarProdutos(filtrados);
+        onPress: async () => {
+          try {
+            await fetch('https://restaurante-brown.vercel.app/api/pedidos?action=removeProduto', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id }),
+            });
+
+            const novosProdutos = produtos.filter(p => p.id !== id);
+            setProdutos(novosProdutos);
+            await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
+          } catch (error) {
+            Alert.alert("Erro", "Não foi possível excluir");
+          }
         },
       },
     ]);
   };
-
 
   const selecionarImagem = async () => {
     Alert.alert(
