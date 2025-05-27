@@ -1,4 +1,3 @@
-// firebaseConfig.js
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -12,9 +11,18 @@ const firebaseConfig = {
   appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
 };
 
-// Inicialize o Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app);
+// Inicialização robusta
+let app;
+let db;
+let storage;
 
-export { app, db, storage };
+try {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  storage = getStorage(app);
+  console.log("Firebase inicializado com sucesso!");
+} catch (error) {
+  console.error("Erro na inicialização do Firebase:", error);
+}
+
+export { db, storage };

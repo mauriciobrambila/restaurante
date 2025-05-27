@@ -1,157 +1,84 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const container = document.getElementById('cardapio');
-  const resumoItens = document.getElementById('resumoItens');
-  const resumoTotal = document.getElementById('resumoTotal');
-  const qrValor = document.getElementById('qrValor');
-  const qrImagem = document.getElementById('qrImagem');
-  const mesaInput = document.getElementById('mesaInput');
+    const container = document.getElementById('cardapio');
+    const finalizarBtn = document.getElementById('finalizarBtn');
+    let produtos = [];
+    let carrinho = {};
   
-  let carrinho = {};
-  let produtos = [];
-
-  // Carrega produtos do Firebase
-  async function carregarProdutos() {
-    try {
-      const response = await fetch('https://restaurante-brown.vercel.app/api/pedidos?action=getProdutos');
-      produtos = await response.json();
-      renderizarCardapio();
-    } catch (error) {
-      console.error("Erro ao carregar cardápio:", error);
-      alert("Não foi possível carregar o cardápio. Tente recarregar a página.");
+    // Debug inicial
+    console.log("Iniciando carregamento do cardápio...");
+  
+    async function carregarCardapio() {
+      try {
+        container.innerHTML = '<p class="loading">Carregando cardápio...</p>';
+        
+        const response = await fetch('https://restaurante-brown.vercel.app/api/pedidos?action=getProdutos');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        produtos = await response.json();
+        console.log("Produtos recebidos:", produtos);
+  
+        if (produtos.length === 0) {
+          container.innerHTML = '<p class="empty">Cardápio vazio</p>';
+          finalizarBtn.style.display = 'none';
+          return;
+        }
+  
+        renderizarCardapio();
+      } catch (error) {
+        console.error("Erro ao carregar cardápio:", error);
+        container.innerHTML = `
+          <p class="error">Erro ao carregar cardápio</p>
+          <button onclick="location.reload()">Tentar novamente</button>
+        `;
+        finalizarBtn.style.display = 'none';
+      }
     }
-  }
-
-  // Renderiza os produtos na tela
-  function renderizarCardapio() {
-    container.innerHTML = '';
-    
-    produtos.forEach(item => {
-      const div = document.createElement('div');
-      div.className = 'card';
-      div.innerHTML = `
-        <img src="${item.imagem || 'img/sem-imagem.jpg'}" alt="${item.nome}" onerror="this.src='img/sem-imagem.jpg'">
-        <h2>${item.nome}</h2>
-        <p>${item.descricao}</p>
-        <p class="preco">R$ ${item.preco.toFixed(2)}</p>
-        <div class="quantidade-controls">
-          <button class="qty-btn" data-id="${item.id}" data-action="minus">-</button>
-          <span id="qtd-${item.id}">0</span>
-          <button class="qty-btn" data-id="${item.id}" data-action="plus">+</button>
+  
+    function renderizarCardapio() {
+      container.innerHTML = produtos.map(produto => `
+        <div class="card" data-id="${produto.id}">
+          <img src="${produto.imagem || 'img/sem-imagem.jpg'}" 
+               alt="${produto.nome}"
+               onerror="this.src='img/sem-imagem.jpg'">
+          <h3>${produto.nome}</h3>
+          <p>${produto.descricao}</p>
+          <p class="preco">R$ ${produto.preco.toFixed(2)}</p>
+          <div class="quantidade-controls">
+            <button class="qty-btn minus" data-id="${produto.id}">-</button>
+            <span class="qty" id="qtd-${produto.id}">0</span>
+            <button class="qty-btn plus" data-id="${produto.id}">+</button>
+          </div>
         </div>
-      `;
-      container.appendChild(div);
-    });
-
-    // Adiciona eventos aos botões
-    document.querySelectorAll('.qty-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const action = btn.getAttribute('data-action');
-        
-        if (!carrinho[id]) carrinho[id] = 0;
-        carrinho[id] += action === 'plus' ? 1 : -1;
-        if (carrinho[id] < 0) carrinho[id] = 0;
-        
-        document.getElementById(`qtd-${id}`).textContent = carrinho[id];
-      });
-    });
-  }
-
-  // Finalizar pedido - Mostra modal
-  document.getElementById('finalizarBtn').addEventListener('click', () => {
-    resumoItens.innerHTML = '';
-    let total = 0;
-    
-    for (let id in carrinho) {
-      if (carrinho[id] > 0) {
-        const p = produtos.find(x => x.id === id);
-        const subtotal = p.preco * carrinho[id];
-        total += subtotal;
-        
-        const li = document.createElement('li');
-        li.textContent = `${p.nome} x${carrinho[id]} = R$ ${subtotal.toFixed(2)}`;
-        resumoItens.appendChild(li);
-      }
-    }
-    
-    if (total === 0) {
-      alert('Adicione itens antes de finalizar!');
-      return;
-    }
-    
-    resumoTotal.textContent = `Total: R$ ${total.toFixed(2)}`;
-    document.getElementById('resumoModal').classList.remove('hidden');
-  });
-
-  // Fechar modal
-  document.getElementById('fecharModalBtn').addEventListener('click', () => {
-    document.getElementById('resumoModal').classList.add('hidden');
-  });
-
-  // Confirmar pedido - Mostra QR Code
-  document.getElementById('confirmarBtn').addEventListener('click', async () => {
-    const mesa = mesaInput.value.trim();
-    if (!mesa) {
-      alert('Informe o número da mesa!');
-      return;
-    }
-
-    const pedido = [];
-    let total = 0;
-    
-    for (let id in carrinho) {
-      if (carrinho[id] > 0) {
-        const p = produtos.find(x => x.id === id);
-        pedido.push({ 
-          nome: p.nome, 
-          quantidade: carrinho[id], 
-          preco: p.preco 
+      `).join('');
+  
+      // Adiciona eventos
+      document.querySelectorAll('.qty-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.target.getAttribute('data-id');
+          const isPlus = e.target.classList.contains('plus');
+          
+          carrinho[id] = (carrinho[id] || 0) + (isPlus ? 1 : -1);
+          carrinho[id] = Math.max(0, carrinho[id]);
+          
+          document.getElementById(`qtd-${id}`).textContent = carrinho[id];
+          finalizarBtn.style.display = Object.values(carrinho).some(qty => qty > 0) ? 'block' : 'none';
         });
-        total += p.preco * carrinho[id];
-      }
-    }
-
-    // Envia para o Firebase
-    try {
-      await fetch('https://restaurante-brown.vercel.app/api/pedidos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mesa,
-          itens: pedido,
-          total: total.toFixed(2),
-          horario: new Date().toISOString()
-        })
       });
-      
-      // Mostra QR Code
-      document.getElementById('resumoModal').classList.add('hidden');
-      document.getElementById('pagamentoModal').classList.remove('hidden');
-      qrValor.textContent = `R$ ${total.toFixed(2)}`;
-      qrImagem.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Pix:${total.toFixed(2)}-Mesa:${mesa}`;
-      
-    } catch (error) {
-      console.error("Erro ao enviar pedido:", error);
-      alert("Erro ao processar pedido. Tente novamente.");
     }
-  });
-
-  // Confirmar pagamento
-  document.getElementById('confirmarPagamentoBtn').addEventListener('click', () => {
-    const mesa = mesaInput.value;
-    const valor = qrValor.textContent;
-    
-    alert(`Pagamento de ${valor} confirmado para a mesa ${mesa}. Obrigado!`);
-    document.getElementById('pagamentoModal').classList.add('hidden');
-    
-    // Limpa carrinho
-    carrinho = {};
-    produtos.forEach(item => {
-      document.getElementById(`qtd-${item.id}`).textContent = '0';
+  
+    // Inicializa
+    await carregarCardapio();
+  
+    // Restante do código para finalizar pedido...
+    finalizarBtn.addEventListener('click', () => {
+      const itensSelecionados = produtos.filter(p => carrinho[p.id] > 0);
+      if (itensSelecionados.length === 0) {
+        alert('Adicione itens ao pedido antes de finalizar!');
+        return;
+      }
+      // Abre o modal de resumo...
     });
-    mesaInput.value = '';
   });
-
-  // Inicializa
-  carregarProdutos();
-});
