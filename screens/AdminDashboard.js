@@ -5,22 +5,9 @@ import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import * as ImageManipulator from 'expo-image-manipulator';
-
-// Configuração do Firebase 
-const firebaseConfig = {
-  apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
-  authDomain: "restaurante-e2ff0.firebaseapp.com",
-  projectId: "restaurante-e2ff0",
-  storageBucket: "restaurante-e2ff0.firebasestorage.app",
-  messagingSenderId: "839289505253",
-  appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
-};
-// Inicialize o Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+//import { app } from '../firebaseConfig'; // Importe sua configuração do Firebase
+import { app, db, storage } from '../../firebaseConfig';
 
 export default function AdminDashboard({ navigation }) {
   const [nome, setNome] = useState('');
@@ -28,75 +15,64 @@ export default function AdminDashboard({ navigation }) {
   const [preco, setPreco] = useState('');
   const [imagem, setImagem] = useState('');
   const [produtos, setProdutos] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const storage = getStorage(app); // Inicializa o Firebase Storage
 
-  useEffect(() => {
-    carregarProdutos();
-  }, []);
-
+  // Carrega produtos do Firebase + cache local
   const carregarProdutos = async () => {
-    setLoading(true);
     try {
-      // Tenta carregar do Firebase primeiro
-      const querySnapshot = await getDocs(collection(db, "produtos"));
-      const produtosFirebase = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      setProdutos(produtosFirebase);
-      await AsyncStorage.setItem('produtos', JSON.stringify(produtosFirebase));
+      const response = await fetch('https://restaurante-brown.vercel.app/api/pedidos?action=getProdutos');
+      const data = await response.json();
+      setProdutos(data);
+      await AsyncStorage.setItem('produtos', JSON.stringify(data));
     } catch (error) {
-      console.error("Erro ao carregar do Firebase:", error);
-      // Fallback para dados locais
-      const dadosLocais = await AsyncStorage.getItem('produtos');
-      if (dadosLocais) {
-        setProdutos(JSON.parse(dadosLocais));
-      }
-    } finally {
-      setLoading(false);
+      const dados = await AsyncStorage.getItem('produtos');
+      if (dados) setProdutos(JSON.parse(dados));
     }
   };
 
-  const processarImagem = async (uri) => {
+  // Upload de imagem para o Firebase Storage
+  const uploadImagem = async (uri) => {
     try {
-      // Redimensiona a imagem para otimização
-      const imagemProcessada = await ImageManipulator.manipulateAsync(
-        uri,
-        [{ resize: { width: 800 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-      );
-      return imagemProcessada.uri;
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const storageRef = ref(storage, `produtos/${Date.now()}.jpg`);
+      await uploadBytes(storageRef, blob);
+      return await getDownloadURL(storageRef);
     } catch (error) {
-      console.error("Erro ao processar imagem:", error);
-      return uri; // Retorna a original se falhar
+      console.error("Erro no upload:", error);
+      Alert.alert("Erro", "Não foi possível enviar a imagem");
+      return null;
     }
   };
 
+  // Adiciona produto ao Firebase
   const adicionarProduto = async () => {
-    if (!nome || !descricao || !preco) {
-      Alert.alert('Erro', 'Preencha nome, descrição e preço!');
+    if (!nome || !descricao || !preco || !imagem) {
+      Alert.alert('Erro', 'Preencha todos os campos!');
       return;
     }
 
     try {
-      setLoading(true);
-      
-      // Cria objeto do produto
+      const imagemUrl = await uploadImagem(imagem);
+      if (!imagemUrl) return;
+
       const novoProduto = {
         nome,
         descricao,
         preco: parseFloat(preco),
-        imagem: imagem || 'sem-imagem.jpg',
-        createdAt: new Date().toISOString()
+        imagem: imagemUrl, // URL pública da imagem
+        id: Date.now().toString(),
       };
 
-      // Adiciona ao Firebase
-      const docRef = await addDoc(collection(db, "produtos"), novoProduto);
-      const produtoComId = { ...novoProduto, id: docRef.id };
+      // Envia para o Firebase
+      await fetch('https://restaurante-brown.vercel.app/api/pedidos?action=addProduto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novoProduto),
+      });
 
-      // Atualiza estado local
-      const novosProdutos = [...produtos, produtoComId];
+      // Atualiza localmente
+      const novosProdutos = [...produtos, novoProduto];
       setProdutos(novosProdutos);
       await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
 
@@ -105,50 +81,37 @@ export default function AdminDashboard({ navigation }) {
       setDescricao('');
       setPreco('');
       setImagem('');
-
-      Alert.alert('Sucesso', 'Produto adicionado localmente e na nuvem!');
+      
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
-      Alert.alert(
-        'Erro', 
-        'Produto foi salvo localmente, mas não na nuvem. Verifique sua conexão.'
-      );
-    } finally {
-      setLoading(false);
+      Alert.alert("Erro", "Não foi possível salvar o produto");
     }
   };
 
+  // Remove produto do Firebase
   const excluirProduto = async (id) => {
-    Alert.alert(
-      'Confirmar Exclusão',
-      'Deseja remover este produto de todos os dispositivos?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              // Remove do Firebase
-              await deleteDoc(doc(db, "produtos", id));
-              
-              // Remove localmente
-              const novosProdutos = produtos.filter(p => p.id !== id);
-              setProdutos(novosProdutos);
-              await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
-            } catch (error) {
-              console.error("Erro ao excluir:", error);
-              Alert.alert('Erro', 'Não foi possível excluir da nuvem');
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
+    Alert.alert('Excluir Produto', 'Remover este produto?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        onPress: async () => {
+          try {
+            await fetch('https://restaurante-brown.vercel.app/api/pedidos?action=removeProduto', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id }),
+            });
 
+            const novosProdutos = produtos.filter(p => p.id !== id);
+            setProdutos(novosProdutos);
+            await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
+          } catch (error) {
+            Alert.alert("Erro", "Não foi possível excluir");
+          }
+        },
+      },
+    ]);
+  };
   const selecionarImagem = async () => {
     Alert.alert(
       'Selecionar Imagem',
