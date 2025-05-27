@@ -13,51 +13,62 @@ export default function RelatorioPedidos({ navigation }) {
 
   const carregarPedidos = async () => {
     try {
-      const response = await fetch('https://restaurante-brown.vercel.app/api/pedidos');
-      if (response.ok) {
-        const pedidosApi = await response.json();
-        // Garante que todos os pedidos tenham horário válido
-        const pedidosFormatados = pedidosApi.map(pedido => ({
-          ...pedido,
-          horario: pedido.horario || new Date().toISOString() // Fallback para data atual
-        }));
-        setPedidos(pedidosFormatados);
-        await AsyncStorage.setItem('pedidos_finalizados', JSON.stringify(pedidosFormatados));
-      } else {
-        const dados = await AsyncStorage.getItem('pedidos_finalizados');
-        if (dados) setPedidos(JSON.parse(dados));
+      const dados = await AsyncStorage.getItem('pedidos_finalizados');
+      if (dados) {
+        setPedidos(JSON.parse(dados));
       }
     } catch (error) {
-      const dados = await AsyncStorage.getItem('pedidos_finalizados');
-      if (dados) setPedidos(JSON.parse(dados));
+      console.error('Erro ao carregar pedidos:', error);
     }
   };
 
-  const renderItem = ({ item, index }) => (
+  const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.mesa}>Mesa: {item.mesa}</Text>
-        <TouchableOpacity onPress={() => excluirPedido(index)}>
+        <TouchableOpacity onPress={() => excluirPedido(item.id)}>
           <Ionicons name="trash-outline" size={22} color="#c62828" />
         </TouchableOpacity>
       </View>
       
-      {/* Linha corrigida para formatar a data */}
+      {/* Correção: Certifique-se que tudo está dentro de componentes Text */}
       <Text style={styles.data}>
-        {item.horario ? new Date(item.horario).toLocaleString('pt-BR') : 'Data não disponível'}
+        {item.horario ? new Date(item.horario).toLocaleDateString('pt-BR') : 'Data não disponível'}
       </Text>
       
-      {item.itens.map((p, i) => (
-        <View key={i} style={styles.itemRow}>
-          <Text style={styles.itemNome}>{p.nome}</Text>
-          <Text style={styles.itemQuantidade}>x{p.quantidade}</Text>
-          <Text style={styles.itemPreco}>R$ {(p.preco * p.quantidade).toFixed(2)}</Text>
+      {item.itens.map((produto, index) => (
+        <View key={index} style={styles.itemRow}>
+          <Text style={styles.itemNome}>{produto.nome}</Text>
+          <Text style={styles.itemQuantidade}>x{produto.quantidade}</Text>
+          <Text style={styles.itemPreco}>R$ {(produto.preco * produto.quantidade).toFixed(2)}</Text>
         </View>
       ))}
       
       <Text style={styles.total}>Total: R$ {item.total.toFixed(2)}</Text>
     </View>
   );
+
+  const excluirPedido = (id) => {
+    Alert.alert(
+      'Confirmar Exclusão',
+      'Deseja excluir este pedido?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            const novosPedidos = pedidos.filter(pedido => pedido.id !== id);
+            await AsyncStorage.setItem('pedidos_finalizados', JSON.stringify(novosPedidos));
+            setPedidos(novosPedidos);
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -67,28 +78,12 @@ export default function RelatorioPedidos({ navigation }) {
         onBackPress={() => navigation.goBack()}
       />
       
-      {pedidos.length > 0 ? (
-        <>
-          <FlatList
-            data={pedidos}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={renderItem}
-            contentContainerStyle={styles.lista}
-          />
-          <TouchableOpacity 
-            style={styles.limparBtn} 
-            onPress={limparTodosPedidos}
-          >
-            <Ionicons name="trash" size={24} color="#c62828" />
-            <Text style={styles.limparTexto}>Limpar Todos os Pedidos</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <View style={styles.vazio}>
-          <Ionicons name="document-text-outline" size={50} color="#999" />
-          <Text style={styles.vazioTexto}>Nenhum pedido registrado </Text>
-        </View>
-      )}
+      <FlatList
+        data={pedidos}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.lista}
+      />
     </View>
   );
 }
