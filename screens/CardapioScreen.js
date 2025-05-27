@@ -6,15 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
-// Limpa instâncias existentes (apenas para desenvolvimento)
-try {
-  deleteApp(getApp());
-} catch (e) {
-  console.log("Nenhuma instância para limpar");
-}
-
-// Agora inicialize
-const app = initializeApp(firebaseConfig);
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "SEU_PROJETO.firebaseapp.com",
@@ -24,54 +15,42 @@ const firebaseConfig = {
   appId: "SEU_APP_ID"
 };
 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 export default function CardapioScreen({ navigation }) {
   const [produtos, setProdutos] = useState([]);
   const [pedido, setPedido] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     const carregarProdutos = async () => {
-      setLoading(true);
       try {
         // Tenta carregar do Firebase primeiro
         const querySnapshot = await getDocs(collection(db, "produtos"));
         const produtosFirebase = [];
-        
         querySnapshot.forEach((doc) => {
-          produtosFirebase.push({
-            id: doc.id,
-            nome: doc.data().nome,
-            descricao: doc.data().descricao,
-            preco: doc.data().preco,
-            imagem: doc.data().imagem || 'sem-imagem.jpg'
-          });
+          produtosFirebase.push({ id: doc.id, ...doc.data() });
         });
-
+        
         if (produtosFirebase.length > 0) {
           setProdutos(produtosFirebase);
           await AsyncStorage.setItem('produtos', JSON.stringify(produtosFirebase));
         } else {
           // Fallback para dados locais
-          const dadosLocais = await AsyncStorage.getItem('produtos');
-          if (dadosLocais) {
-            setProdutos(JSON.parse(dadosLocais));
-          }
+          const dados = await AsyncStorage.getItem('produtos');
+          if (dados) setProdutos(JSON.parse(dados));
         }
       } catch (error) {
         console.error("Erro ao carregar produtos:", error);
-        setError("Não foi possível carregar o cardápio online");
-        
         // Fallback para dados locais
-        const dadosLocais = await AsyncStorage.getItem('produtos');
-        if (dadosLocais) {
-          setProdutos(JSON.parse(dadosLocais));
-        }
+        const dados = await AsyncStorage.getItem('produtos');
+        if (dados) setProdutos(JSON.parse(dados));
       } finally {
         setLoading(false);
       }
     };
-
+    
     carregarProdutos();
   }, []);
 
