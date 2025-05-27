@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 //import { app } from '../firebaseConfig'; // Importe sua configuração do Firebase
-import { app, db, storage } from '../../firebaseConfig';
+import { app, db, storage } from '../firebaseConfig';
 
 export default function AdminDashboard({ navigation }) {
   const [nome, setNome] = useState('');
