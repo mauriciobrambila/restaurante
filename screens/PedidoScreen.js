@@ -8,6 +8,7 @@ const imagens = {
   'xburguer.jpg': require('../img/xburguer.jpg'),
   'batata.jpg': require('../img/batata.jpg'),
   'refri.jpg': require('../img/refri.jpg'),
+  'cerveja.jpg': require('../img/cerveja.jpg'),
 };
 
 export default function PedidoScreen({ route, navigation }) {
