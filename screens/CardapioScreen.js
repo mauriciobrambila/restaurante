@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
-// Configuração do Firebase (use a mesma configuração do AdminDashboard)
+// Mesma configuração do Firebase usada no AdminDashboard
 const firebaseConfig = {
   apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
   authDomain: "restaurante-e2ff0.firebaseapp.com",
@@ -21,7 +21,6 @@ const db = getFirestore(app);
 export default function CardapioScreen({ navigation }) {
   const [produtos, setProdutos] = useState([]);
   const [pedido, setPedido] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const carregarProdutos = async () => {
@@ -46,8 +45,6 @@ export default function CardapioScreen({ navigation }) {
         // Fallback para dados locais
         const dados = await AsyncStorage.getItem('produtos');
         if (dados) setProdutos(JSON.parse(dados));
-      } finally {
-        setLoading(false);
       }
     };
     

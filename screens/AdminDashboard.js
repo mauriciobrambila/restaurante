@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, 
-  Platform, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, 
+  KeyboardAvoidingView, Platform, Image } from 'react-native';
 import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import * as ImageManipulator from 'expo-image-manipulator';
 
+// Configuração do Firebase (substitua com suas credenciais)
 const firebaseConfig = {
   apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
   authDomain: "restaurante-e2ff0.firebaseapp.com",
@@ -38,94 +40,114 @@ export default function AdminDashboard({ navigation }) {
     try {
       // Tenta carregar do Firebase primeiro
       const querySnapshot = await getDocs(collection(db, "produtos"));
-      const produtosFirebase = [];
-      querySnapshot.forEach((doc) => {
-        produtosFirebase.push({ id: doc.id, ...doc.data() });
-      });
+      const produtosFirebase = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
       
-      if (produtosFirebase.length > 0) {
-        setProdutos(produtosFirebase);
-        await AsyncStorage.setItem('produtos', JSON.stringify(produtosFirebase));
-      } else {
-        // Fallback para dados locais
-        const dados = await AsyncStorage.getItem('produtos');
-        if (dados) setProdutos(JSON.parse(dados));
-      }
+      setProdutos(produtosFirebase);
+      await AsyncStorage.setItem('produtos', JSON.stringify(produtosFirebase));
     } catch (error) {
-      console.error("Erro ao carregar produtos:", error);
+      console.error("Erro ao carregar do Firebase:", error);
       // Fallback para dados locais
-      const dados = await AsyncStorage.getItem('produtos');
-      if (dados) setProdutos(JSON.parse(dados));
+      const dadosLocais = await AsyncStorage.getItem('produtos');
+      if (dadosLocais) {
+        setProdutos(JSON.parse(dadosLocais));
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const processarImagem = async (uri) => {
+    try {
+      // Redimensiona a imagem para otimização
+      const imagemProcessada = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return imagemProcessada.uri;
+    } catch (error) {
+      console.error("Erro ao processar imagem:", error);
+      return uri; // Retorna a original se falhar
+    }
+  };
+
   const adicionarProduto = async () => {
-    if (!nome || !descricao || !preco || !imagem) {
-      Alert.alert('Erro', 'Preencha todos os campos!');
+    if (!nome || !descricao || !preco) {
+      Alert.alert('Erro', 'Preencha nome, descrição e preço!');
       return;
     }
 
     try {
       setLoading(true);
+      
+      // Cria objeto do produto
       const novoProduto = {
         nome,
         descricao,
         preco: parseFloat(preco),
-        imagem,
+        imagem: imagem || 'sem-imagem.jpg',
         createdAt: new Date().toISOString()
       };
 
       // Adiciona ao Firebase
       const docRef = await addDoc(collection(db, "produtos"), novoProduto);
-      
-      // Atualiza estado local
       const produtoComId = { ...novoProduto, id: docRef.id };
+
+      // Atualiza estado local
       const novosProdutos = [...produtos, produtoComId];
-      
       setProdutos(novosProdutos);
       await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
-      
+
+      // Limpa o formulário
       setNome('');
       setDescricao('');
       setPreco('');
       setImagem('');
-      
-      Alert.alert('Sucesso', 'Produto adicionado ao cardápio online!');
+
+      Alert.alert('Sucesso', 'Produto adicionado localmente e na nuvem!');
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
-      Alert.alert('Erro', 'Não foi possível adicionar o produto');
+      Alert.alert(
+        'Erro', 
+        'Produto foi salvo localmente, mas não na nuvem. Verifique sua conexão.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const excluirProduto = async (id) => {
-    Alert.alert('Excluir Produto', 'Remover este produto?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setLoading(true);
-            // Remove do Firebase
-            await deleteDoc(doc(db, "produtos", id));
-            
-            // Atualiza estado local
-            const filtrados = produtos.filter((p) => p.id !== id);
-            setProdutos(filtrados);
-            await AsyncStorage.setItem('produtos', JSON.stringify(filtrados));
-          } catch (error) {
-            console.error("Erro ao excluir produto:", error);
-            Alert.alert('Erro', 'Não foi possível excluir o produto');
-          } finally {
-            setLoading(false);
+    Alert.alert(
+      'Confirmar Exclusão',
+      'Deseja remover este produto de todos os dispositivos?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              // Remove do Firebase
+              await deleteDoc(doc(db, "produtos", id));
+              
+              // Remove localmente
+              const novosProdutos = produtos.filter(p => p.id !== id);
+              setProdutos(novosProdutos);
+              await AsyncStorage.setItem('produtos', JSON.stringify(novosProdutos));
+            } catch (error) {
+              console.error("Erro ao excluir:", error);
+              Alert.alert('Erro', 'Não foi possível excluir da nuvem');
+            } finally {
+              setLoading(false);
+            }
           }
-        },
-      },
-    ]);
+        }
+      ]
+    );
   };
 
   const selecionarImagem = async () => {
@@ -267,7 +289,7 @@ export default function AdminDashboard({ navigation }) {
         )}
 
         <TouchableOpacity 
-          style={styles.btn} 
+          style={[styles.btn, loading && { opacity: 0.7 }]} 
           onPress={adicionarProduto}
           disabled={loading}
         >
