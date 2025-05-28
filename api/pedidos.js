@@ -6,11 +6,10 @@ const firebaseConfig = {
   apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
   authDomain: "restaurante-e2ff0.firebaseapp.com",
   projectId: "restaurante-e2ff0",
-  storageBucket: "restaurante-e2ff0.appspot.com",
+  storageBucket: "restaurante-e2ff0.firebasestorage.app",
   messagingSenderId: "839289505253",
   appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
 };
-
 // Inicialize o Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);

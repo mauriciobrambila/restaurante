@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
+// Configuração do Firebase (use a mesma configuração do AdminDashboard)
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO_ID",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyCOIPGdGlJazNtrnrp6j8MbXUOqW7OSspQ",
+  authDomain: "restaurante-e2ff0.firebaseapp.com",
+  projectId: "restaurante-e2ff0",
+  storageBucket: "restaurante-e2ff0.firebasestorage.app",
+  messagingSenderId: "839289505253",
+  appId: "1:839289505253:web:2ccdd32cc64fc010b4db0c"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
